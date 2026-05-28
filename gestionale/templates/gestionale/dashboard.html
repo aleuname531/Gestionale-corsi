@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<title>Beta80 — Gestione Formazione Aziendale</title>
+<link rel="stylesheet" href="{% static 'gestionale/css/dashboard.css' %}">
+</head>
+<body>
+
+<!-- ═══ LOGIN PAGE ═══════════════════════════════════════════ -->
+<div id="login-page">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">Beta<span>80</span></div>
+      <p>Portale Gestione Formazione Aziendale</p>
+    </div>
+    <h2>Accedi al portale</h2>
+    <div class="login-error" id="login-error">Email o password non corretti.</div>
+    <div class="form-group">
+      <label>Email aziendale</label>
+      <input class="form-control" type="email" id="login-email" placeholder="nome@beta80group.it" value="">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input class="form-control" type="password" id="login-pwd" placeholder="••••••••">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="doLogin()" style="margin-top:8px">Accedi</button>
+    <div class="demo-hint">
+      <strong>Demo credenziali:</strong><br>
+      👑 Admin: <code>admin@beta80group.it</code> / <code>admin123</code><br>
+      👤 Dipendente: <code>rossi.mario@beta80group.it</code> / <code>pass123</code>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP ════════════════════════════════════════════════════ -->
+<div id="app">
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand">Beta<span>80</span></div>
+        <small>Formazione Aziendale</small>
+      </div>
+      <div class="sidebar-user">
+        <div class="avatar" id="sb-avatar"></div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sb-name"></div>
+          <div class="sidebar-user-role" id="sb-role"></div>
+        </div>
+      </div>
+      <nav id="nav-menu"></nav>
+      <div class="sidebar-bottom">
+        <button class="btn-logout" onclick="doLogout()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+          Esci
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div id="main-content">
+      <div class="topbar">
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-right" id="topbar-right"></div>
+      </div>
+      <div class="page-content" id="page-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL ══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- ═══ TOAST ══════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<script src="{% static 'gestionale/js/storage.js' %}"></script>
+<script src="{% static 'gestionale/js/api.js' %}"></script>
+<script src="{% static 'gestionale/js/auth.js' %}"></script>
+<script src="{% static 'gestionale/js/dashboard.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>
