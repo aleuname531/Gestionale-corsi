@@ -1,7 +1,7 @@
+import os
+
 from django.db import models
 from django.utils import timezone
-
-#modelo per gestire i corsi, i vendor, i dipendenti e le assegnazioni dei corsi ai dipendenti
 class Vendor(models.Model):
     nome = models.CharField(max_length=200)
     sito_web = models.URLField(blank=True)

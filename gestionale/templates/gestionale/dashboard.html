@@ -42,7 +42,7 @@
 
     <!-- SIDEBAR -->
     <aside id="sidebar">
-      <div class="sidebar-brand">
+      <div class="sidebar-brand" onclick="navigate('dashboard')" style="cursor:pointer">
         <div class="brand">Beta<span>80</span></div>
         <small>Formazione Aziendale</small>
       </div>
@@ -88,10 +88,10 @@
 <!-- ═══ TOAST ══════════════════════════════════════════════════ -->
 <div id="toast-container"></div>
 
+<script src="{% static 'gestionale/js/xlsx.full.min.js' %}"></script>
 <script src="{% static 'gestionale/js/storage.js' %}"></script>
 <script src="{% static 'gestionale/js/api.js' %}"></script>
 <script src="{% static 'gestionale/js/auth.js' %}"></script>
 <script src="{% static 'gestionale/js/dashboard.js' %}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>

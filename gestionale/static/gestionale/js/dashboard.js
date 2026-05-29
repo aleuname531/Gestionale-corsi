@@ -219,19 +219,19 @@ function renderAdminDashboard(){
 
   return `
   <div class="stats-grid">
-    <div class="stat-card">
+    <div class="stat-card" onclick="navigate('courses')" style="cursor:pointer">
       <div class="stat-icon blue">📚</div>
       <div><div class="stat-num">${courses.length}</div><div class="stat-label">Corsi nel Catalogo</div></div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="navigate('users')" style="cursor:pointer">
       <div class="stat-icon green">👥</div>
       <div><div class="stat-num">${users.length}</div><div class="stat-label">Dipendenti Attivi</div></div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="navigate('enrollments')" style="cursor:pointer">
       <div class="stat-icon yellow">📋</div>
       <div><div class="stat-num">${enrollments.length}</div><div class="stat-label">Iscrizioni Totali</div></div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" onclick="navigate('expiring')" style="cursor:pointer">
       <div class="stat-icon red">⏰</div>
       <div><div class="stat-num">${scadenze}</div><div class="stat-label">In Scadenza (90gg)</div></div>
     </div>
@@ -322,13 +322,13 @@ function renderUserDashboard(){
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-icon green">✅</div>
+    <div class="stat-card" onclick="navigate('my-courses')" style="cursor:pointer"><div class="stat-icon green">✅</div>
       <div><div class="stat-num">${completati.length}</div><div class="stat-label">Completati</div></div></div>
-    <div class="stat-card"><div class="stat-icon blue">🔵</div>
+    <div class="stat-card" onclick="navigate('my-courses')" style="cursor:pointer"><div class="stat-icon blue">🔵</div>
       <div><div class="stat-num">${inCorso.length}</div><div class="stat-label">In Corso</div></div></div>
-    <div class="stat-card"><div class="stat-icon yellow">⏳</div>
+    <div class="stat-card" onclick="navigate('my-courses')" style="cursor:pointer"><div class="stat-icon yellow">⏳</div>
       <div><div class="stat-num">${daIniziare.length}</div><div class="stat-label">Da Iniziare</div></div></div>
-    <div class="stat-card"><div class="stat-icon red">⏰</div>
+    <div class="stat-card" onclick="navigate('my-courses')" style="cursor:pointer"><div class="stat-icon red">⏰</div>
       <div><div class="stat-num">${scadenze.length}</div><div class="stat-label">In Scadenza</div></div></div>
   </div>
 
