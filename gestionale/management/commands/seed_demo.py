@@ -4,6 +4,8 @@ Uso: python manage.py seed_demo
      python manage.py seed_demo --reset   (cancella tutto e riricrea)
 """
 
+import secrets
+
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -13,11 +15,11 @@ from gestionale.models import AssegnazioneCorso, Corso, Dipendente, Vendor
 
 DEMO_USERS = [
     {'username': 'admin',                    'email': 'admin@beta80group.it',               'password': 'admin123',  'first_name': 'Admin',      'last_name': 'Beta80',   'is_staff': True,  'is_superuser': True},
-    {'username': 'rossi.mario',              'email': 'rossi.mario@beta80group.it',          'password': 'pass123',   'first_name': 'Mario',      'last_name': 'Rossi',    'area': 'RPA'},
-    {'username': 'cangini.elisabetta',       'email': 'cangini.elisabetta@beta80group.it',   'password': 'pass123',   'first_name': 'Elisabetta', 'last_name': 'Cangini',  'area': 'RPA'},
-    {'username': 'ferrari.giulia',           'email': 'ferrari.giulia@beta80group.it',       'password': 'pass123',   'first_name': 'Giulia',     'last_name': 'Ferrari',  'area': 'RPA'},
-    {'username': 'bianchi.luca',             'email': 'bianchi.luca@beta80group.it',         'password': 'pass123',   'first_name': 'Luca',       'last_name': 'Bianchi',  'area': 'PM'},
-    {'username': 'moretti.sara',             'email': 'moretti.sara@beta80group.it',         'password': 'pass123',   'first_name': 'Sara',       'last_name': 'Moretti',  'area': 'RPA'},
+    {'username': 'rossi.mario',              'email': 'rossi.mario@beta80group.it',          'first_name': 'Mario',      'last_name': 'Rossi',    'area': 'RPA'},
+    {'username': 'cangini.elisabetta',       'email': 'cangini.elisabetta@beta80group.it',   'first_name': 'Elisabetta', 'last_name': 'Cangini',  'area': 'RPA'},
+    {'username': 'ferrari.giulia',           'email': 'ferrari.giulia@beta80group.it',       'first_name': 'Giulia',     'last_name': 'Ferrari',  'area': 'RPA'},
+    {'username': 'bianchi.luca',             'email': 'bianchi.luca@beta80group.it',         'first_name': 'Luca',       'last_name': 'Bianchi',  'area': 'PM'},
+    {'username': 'moretti.sara',             'email': 'moretti.sara@beta80group.it',         'first_name': 'Sara',       'last_name': 'Moretti',  'area': 'RPA'},
 ]
 
 DEMO_CORSI = [
@@ -69,7 +71,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('\n✅ Seed completato con successo!\n'))
         self.stdout.write('Credenziali di accesso:')
         self.stdout.write('  👑 Admin:      admin@beta80group.it  /  admin123')
-        self.stdout.write('  👤 Dipendente: rossi.mario@beta80group.it  /  pass123')
+        self.stdout.write('  👤 Dipendente: le password generate sono stampate sopra per ogni utente')
 
     def _seed_users(self):
         self.stdout.write('\nCreazione utenti...')
@@ -86,10 +88,12 @@ class Command(BaseCommand):
             )
             if created:
                 stato = 'creato'
+                password = u.get('password') or secrets.token_urlsafe(12)
+                user.set_password(password)
+                self.stdout.write(f'  password generata → {password}')
             else:
                 stato = 'già esistente'
             user.email = u['email']
-            user.set_password(u['password'])
             user.save()
             self.stdout.write(f'  {u["username"]:35} {stato}')
 

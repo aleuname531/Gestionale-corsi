@@ -10,7 +10,7 @@ from .models import AssegnazioneCorso, Corso, Dipendente
 class ApiSecurityValidationTests(TestCase):
     def setUp(self):
         self.client = Client(enforce_csrf_checks=True)
-        self.client.get('/')
+        self.client.get('/login/')  # renderizza {% csrf_token %}, imposta il cookie
         self.csrf = self.client.cookies['csrftoken'].value
         self.admin = User.objects.create_user(
             username='admin@beta80group.it',
@@ -109,7 +109,7 @@ class ApiSecurityValidationTests(TestCase):
 
     def test_login_uses_django_session_auth(self):
         self.client.logout()
-        self.client.get('/')
+        self.client.get('/login/')  # renderizza {% csrf_token %}, imposta il cookie
         self.csrf = self.client.cookies['csrftoken'].value
         self.csrf_headers = {'X-CSRFToken': self.csrf}
         response = self.post_json('/api/auth/login/', {

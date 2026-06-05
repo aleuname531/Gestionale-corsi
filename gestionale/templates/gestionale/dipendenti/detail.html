@@ -18,17 +18,45 @@
     {% if dipendente.attivo %}<span class="badge badge-success">Attivo</span>{% else %}<span class="badge badge-danger">Inattivo</span>{% endif %}
   </div>
   <div style="color:#64748b;font-size:14px;margin-top:6px;">{{ dipendente.email }}</div>
+  {% if dipendente.stipendio is not None %}
+  <div style="margin-top:8px;font-size:14px;color:#1e293b;">
+    <strong>Stipendio mensile:</strong> € {{ dipendente.stipendio }}
+  </div>
+  {% endif %}
+</div>
+
+<!-- Riepilogo statistiche -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;">
+  <div class="card" style="padding:16px 20px;text-align:center;">
+    <div style="font-size:28px;font-weight:800;color:#1e293b;">{{ totale }}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px;">Corsi totali</div>
+  </div>
+  <div class="card" style="padding:16px 20px;text-align:center;">
+    <div style="font-size:28px;font-weight:800;color:#16a34a;">{{ completati }}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px;">Completati</div>
+  </div>
+  <div class="card" style="padding:16px 20px;text-align:center;">
+    <div style="font-size:28px;font-weight:800;color:#2563eb;">{{ in_corso }}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px;">In corso</div>
+  </div>
+  <div class="card" style="padding:16px 20px;text-align:center;">
+    <div style="font-size:28px;font-weight:800;color:#7c3aed;">{{ ore_totali }}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px;">Ore completate</div>
+  </div>
 </div>
 
 <div class="card">
   <div class="card-header">
-    <div class="card-title">Assegnazioni corsi ({{ assegnazioni|length }})</div>
+    <div class="card-title">Corsi assegnati ({{ totale }})</div>
   </div>
   <div class="card-body" style="padding:0;">
     <table>
       <thead>
         <tr>
           <th>Corso</th>
+          <th>Tipologia</th>
+          <th>Ore</th>
+          <th>Vendor</th>
           <th>Stato</th>
           <th>Completamento</th>
           <th>Scadenza</th>
@@ -38,8 +66,14 @@
       </thead>
       <tbody>
         {% for a in assegnazioni %}
-        <tr>
-          <td>{{ a.corso.titolo }}</td>
+        <tr class="clickable-row" data-href="{% url 'gestionale:corso_detail' a.corso.pk %}">
+          <td>
+            <strong>{{ a.corso.titolo }}</strong>
+            {% if a.corso.obbligatorio %}<span class="badge badge-danger" style="font-size:10px;margin-left:6px;">Obbligatorio</span>{% endif %}
+          </td>
+          <td><span class="badge badge-secondary">{{ a.corso.tipologia }}</span></td>
+          <td>{% if a.corso.durata_ore %}{{ a.corso.durata_ore }}h{% else %}—{% endif %}</td>
+          <td>{{ a.corso.vendor|default:"—" }}</td>
           <td>
             {% if a.stato == 'completato' %}<span class="badge badge-success">Completato</span>
             {% elif a.stato == 'in_corso' %}<span class="badge badge-info">In corso</span>
@@ -60,7 +94,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6" style="padding:24px;text-align:center;color:#64748b;">Nessuna assegnazione.</td>
+          <td colspan="9" style="padding:24px;text-align:center;color:#64748b;">Nessuna assegnazione.</td>
         </tr>
         {% endfor %}
       </tbody>

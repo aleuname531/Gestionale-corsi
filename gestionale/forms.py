@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import AssegnazioneCorso, Corso, Dipendente, Vendor
+from .models import AssegnazioneCorso, Corso, Dipendente, MaterialeCorso, Vendor
 
 
 class StyledFormMixin:
@@ -39,6 +39,12 @@ class DipendenteForm(StyledFormMixin, forms.ModelForm):
         fields = ['nome', 'cognome', 'email', 'reparto', 'attivo']
 
 
+class DipendenteAdminForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = Dipendente
+        fields = ['nome', 'cognome', 'email', 'reparto', 'attivo', 'stipendio']
+
+
 class AssegnazioneCorsoForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = AssegnazioneCorso
@@ -59,8 +65,24 @@ class AssegnazioneCorsoForm(StyledFormMixin, forms.ModelForm):
         inizio = cleaned.get('data_inizio_pianificata')
         fine = cleaned.get('data_fine_pianificata')
         if inizio and fine and fine < inizio:
-            raise forms.ValidationError('La data di fine pianificata non può essere precedente a quella di inizio.')
+            raise forms.ValidationError({
+                'data_fine_pianificata': 'La data di fine pianificata non può essere precedente a quella di inizio.',
+            })
         return cleaned
+
+
+class MaterialeCorsoForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = MaterialeCorso
+        fields = ['titolo', 'file']
+
+    def clean_file(self):
+        f = self.cleaned_data['file']
+        if not f.name.lower().endswith('.pdf'):
+            raise forms.ValidationError('Formato non supportato. Carica un file PDF.')
+        if f.size > 20 * 1024 * 1024:
+            raise forms.ValidationError('Il file supera il limite di 20 MB.')
+        return f
 
 
 class CertificatoForm(forms.Form):

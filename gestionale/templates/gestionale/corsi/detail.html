@@ -29,6 +29,59 @@
   {% endif %}
 </div>
 
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-header">
+    <div class="card-title">Materiali ({{ corso.materiali.count }})</div>
+    {% if request.user.is_staff %}
+    <a href="{% url 'gestionale:materiale_upload' corso.pk %}" class="btn btn-primary btn-sm">+ Carica PDF</a>
+    {% endif %}
+  </div>
+  <div class="card-body" style="padding:0;">
+    {% with materiali=corso.materiali.all %}
+    {% if materiali %}
+    <table>
+      <thead>
+        <tr>
+          <th>Titolo</th>
+          <th>Caricato il</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in materiali %}
+        <tr>
+          <td>
+            <a href="{{ m.file.url }}" target="_blank" style="color:#1e40af;font-weight:500;">
+              📄 {{ m.titolo }}
+            </a>
+          </td>
+          <td style="color:#64748b;font-size:13px;">{{ m.created_at|date:"d/m/Y" }}</td>
+          <td class="td-actions">
+            <a href="{{ m.file.url }}" download class="btn btn-outline btn-sm">Scarica</a>
+            {% if request.user.is_staff %}
+            <form method="post" action="{% url 'gestionale:materiale_delete' m.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm"
+                      onclick="return confirm('Eliminare il materiale \'{{ m.titolo }}\'?')">Elimina</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="padding:24px;text-align:center;color:#64748b;">
+      Nessun materiale caricato.
+      {% if request.user.is_staff %}
+      <a href="{% url 'gestionale:materiale_upload' corso.pk %}">Carica il primo PDF</a>.
+      {% endif %}
+    </div>
+    {% endif %}
+    {% endwith %}
+  </div>
+</div>
+
 <div class="card">
   <div class="card-header">
     <div class="card-title">Assegnazioni ({{ assegnazioni|length }})</div>
@@ -49,7 +102,7 @@
       </thead>
       <tbody>
         {% for a in assegnazioni %}
-        <tr>
+        <tr {% if request.user.is_staff %}class="clickable-row" data-href="{% url 'gestionale:dipendente_detail' a.dipendente.pk %}"{% endif %}>
           <td>{{ a.dipendente }}</td>
           <td>
             {% if a.stato == 'completato' %}<span class="badge badge-success">Completato</span>

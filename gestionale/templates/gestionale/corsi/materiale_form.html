@@ -1,0 +1,33 @@
+{% extends "gestionale/base.html" %}
+
+{% block title %}Carica materiale — {{ corso.titolo }}{% endblock %}
+{% block page_title %}Carica materiale PDF{% endblock %}
+
+{% block content %}
+<a href="{% url 'gestionale:corso_detail' corso.pk %}" class="back-btn">← Torna al corso</a>
+
+<div class="card" style="max-width:500px;">
+  <div class="card-header">
+    <div class="card-title">{{ corso.titolo }}</div>
+  </div>
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% for field in form %}
+      <div class="form-group">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<div style="font-size:11px;color:#64748b;margin-top:4px;">{{ field.help_text }}</div>{% endif %}
+        {% if field.errors %}
+        <div style="color:#dc2626;font-size:12px;margin-top:4px;">{{ field.errors }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-primary">Carica</button>
+        <a href="{% url 'gestionale:corso_detail' corso.pk %}" class="btn btn-outline">Annulla</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

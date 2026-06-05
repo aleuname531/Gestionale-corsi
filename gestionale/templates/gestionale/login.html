@@ -15,7 +15,11 @@
       <p>Portale formazione aziendale</p>
     </div>
     <h2>Accedi</h2>
-    {% if form.errors %}
+    {% if ratelimited %}
+    <div class="login-error" style="display:block;">
+      Troppi tentativi di accesso. Riprova tra un minuto.
+    </div>
+    {% elif form.errors %}
     <div class="login-error" style="display:block;">
       {% for error in form.non_field_errors %}{{ error }}{% endfor %}
       {% if not form.non_field_errors %}Credenziali non valide. Riprova.{% endif %}

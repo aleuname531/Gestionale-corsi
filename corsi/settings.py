@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'gestionale',
+    'django_ratelimit',
 ]
 
 MIDDLEWARE = [
@@ -91,6 +92,22 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# --- Cache (rate limiting) ----------------------------------------------------
+# Produzione: impostare DJANGO_CACHE_BACKEND=django.core.cache.backends.memcached.PyMemcacheCache
+# oppure usare django-redis. In sviluppo LocMemCache è sufficiente (singolo processo).
+CACHES = {
+    'default': {
+        'BACKEND': os.environ.get(
+            'DJANGO_CACHE_BACKEND',
+            'django.core.cache.backends.locmem.LocMemCache',
+        ),
+    }
+}
+
+# LocMemCache non è condivisa tra processi: va bene per sviluppo/test.
+# Con un backend reale (Redis, Memcache) questi check non si attivano.
+SILENCED_SYSTEM_CHECKS = ['django_ratelimit.E003', 'django_ratelimit.W001']
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'

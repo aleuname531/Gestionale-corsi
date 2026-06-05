@@ -40,7 +40,7 @@
       </thead>
       <tbody>
         {% for d in dipendenti %}
-        <tr>
+        <tr class="clickable-row" data-href="{% url 'gestionale:dipendente_detail' d.pk %}">
           <td><strong>{{ d.cognome }} {{ d.nome }}</strong></td>
           <td>{{ d.email }}</td>
           <td><span class="badge badge-secondary">{{ d.reparto }}</span></td>

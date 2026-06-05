@@ -51,7 +51,7 @@
       </thead>
       <tbody>
         {% for a in assegnazioni %}
-        <tr>
+        <tr class="clickable-row" data-href="{% url 'gestionale:assegnazione_update' a.pk %}">
           {% if request.user.is_staff %}<td>{{ a.dipendente }}</td>{% endif %}
           <td><strong>{{ a.corso.titolo }}</strong></td>
           <td>{{ a.corso.vendor.nome|default:"—" }}</td>

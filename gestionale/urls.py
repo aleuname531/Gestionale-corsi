@@ -34,6 +34,16 @@ urlpatterns = [
     path('assegnazioni/<int:pk>/certificato/', views.CertificatoUploadView.as_view(), name='certificato_upload'),
     path('assegnazioni/<int:pk>/certificato/elimina/', views.CertificatoDeleteView.as_view(), name='certificato_delete'),
 
+    # Materiali corso
+    path('corsi/<int:pk>/materiali/', views.MaterialeCorsoUploadView.as_view(), name='materiale_upload'),
+    path('corsi/materiali/<int:pk>/elimina/', views.MaterialeCorsoDeleteView.as_view(), name='materiale_delete'),
+
     # Export
     path('export/excel/', views.ExportExcelView.as_view(), name='export_excel'),
+
+    # API JSON (usate dai test e da client esterni)
+    path('api/corsi/', views.ApiCorsoCreateView.as_view(), name='api_corso_create'),
+    path('api/assegnazioni/', views.ApiAssegnazioneCreateView.as_view(), name='api_assegnazione_create'),
+    path('api/assegnazioni/<int:pk>/certificato/', views.ApiCertificatoUploadView.as_view(), name='api_certificato_upload'),
+    path('api/auth/login/', views.ApiLoginView.as_view(), name='api_login'),
 ]

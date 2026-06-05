@@ -6,13 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Gestione Formazione{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'gestionale/css/dashboard.css' %}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
 <div class="app-layout">
 
   <aside id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand">Gestione <span>Formazione</span></div>
+      <a href="{% url 'gestionale:dashboard' %}" class="brand" style="text-decoration:none;color:#fff;">Gestione <span>Formazione</span></a>
     </div>
     <div class="sidebar-user">
       <div class="avatar {% if request.user.is_staff %}avatar-admin{% else %}avatar-dipendente{% endif %}">
@@ -25,12 +26,11 @@
     </div>
     <nav>
       <div class="nav-section">Navigazione</div>
-      <a href="{% url 'gestionale:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a>
-      <a href="{% url 'gestionale:corso_list' %}" class="nav-item {% if 'corso' in request.resolver_match.url_name %}active{% endif %}">Corsi</a>
-      <a href="{% url 'gestionale:assegnazione_list' %}" class="nav-item {% if 'assegnazione' in request.resolver_match.url_name or 'certificato' in request.resolver_match.url_name %}active{% endif %}">Assegnazioni</a>
+      <a href="{% url 'gestionale:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <a href="{% url 'gestionale:corso_list' %}" class="nav-item {% if 'corso' in request.resolver_match.url_name %}active{% endif %}"><i class="bi bi-journal-bookmark-fill"></i> Corsi</a>
+      <a href="{% url 'gestionale:assegnazione_list' %}" class="nav-item {% if 'assegnazione' in request.resolver_match.url_name or 'certificato' in request.resolver_match.url_name %}active{% endif %}"><i class="bi bi-clipboard-check"></i> Assegnazioni</a>
       {% if request.user.is_staff %}
-      <a href="{% url 'gestionale:dipendente_list' %}" class="nav-item {% if 'dipendente' in request.resolver_match.url_name %}active{% endif %}">Dipendenti</a>
-      <a href="{% url 'gestionale:export_excel' %}" class="nav-item">Esporta Excel</a>
+      <a href="{% url 'gestionale:dipendente_list' %}" class="nav-item {% if 'dipendente' in request.resolver_match.url_name %}active{% endif %}"><i class="bi bi-people-fill"></i> Dipendenti</a>
       {% endif %}
     </nav>
     <div class="sidebar-bottom">
@@ -64,5 +64,13 @@
   </main>
 
 </div>
+<script>
+  document.querySelectorAll('[data-href]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      if (e.target.closest('a, button, input, select, form')) return;
+      window.location.href = el.dataset.href;
+    });
+  });
+</script>
 </body>
 </html>

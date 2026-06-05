@@ -3,56 +3,69 @@
 {% block title %}Dashboard — Gestione Formazione{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
-{% block topbar_actions %}
-  {% if request.user.is_staff %}
-  <a href="{% url 'gestionale:assegnazione_create' %}" class="btn btn-primary btn-sm">+ Nuova assegnazione</a>
-  {% endif %}
-{% endblock %}
-
 {% block content %}
 
 {% if request.user.is_staff %}
 {# ── ADMIN ── #}
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-icon blue">📚</div>
-    <div>
-      <div class="stat-num">{{ totale_corsi }}</div>
-      <div class="stat-label">Corsi totali</div>
-    </div>
+
+<div class="dashboard-header">
+  <div class="dashboard-header-text">
+    <h1>Panoramica generale</h1>
+    <p>Formazione aziendale — stato aggiornato a oggi</p>
   </div>
-  <div class="stat-card">
-    <div class="stat-icon green">👥</div>
-    <div>
-      <div class="stat-num">{{ totale_dipendenti }}</div>
-      <div class="stat-label">Dipendenti attivi</div>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon yellow">📋</div>
-    <div>
-      <div class="stat-num">{{ totale_assegnazioni }}</div>
-      <div class="stat-label">Assegnazioni</div>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon red">⚠️</div>
-    <div>
-      <div class="stat-num">{{ scadenze_imminenti|length }}</div>
-      <div class="stat-label">Scadenze 30 gg</div>
-    </div>
+  <div class="dashboard-actions">
+    <a href="{% url 'gestionale:corso_list' %}" class="btn btn-outline btn-sm">+ Nuovo corso</a>
+    <a href="{% url 'gestionale:assegnazione_create' %}" class="btn btn-primary btn-sm">+ Nuova assegnazione</a>
+    <a href="{% url 'gestionale:export_excel' %}" class="btn btn-outline btn-sm">Esporta Excel</a>
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+<div class="stats-grid">
+  <a href="{% url 'gestionale:corso_list' %}" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon blue"><i class="bi bi-journal-bookmark-fill"></i></div>
+    <div>
+      <div class="stat-num">{{ totale_corsi }}</div>
+      <div class="stat-label">Corsi totali</div>
+      <div class="stat-sub">nel catalogo formativo</div>
+    </div>
+  </a>
+  <a href="{% url 'gestionale:dipendente_list' %}" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon green"><i class="bi bi-people-fill"></i></div>
+    <div>
+      <div class="stat-num">{{ totale_dipendenti }}</div>
+      <div class="stat-label">Dipendenti attivi</div>
+      <div class="stat-sub">{{ dipendenti_assegnati }} assegnati a corsi</div>
+    </div>
+  </a>
+  <a href="{% url 'gestionale:assegnazione_list' %}" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon yellow"><i class="bi bi-clipboard-check"></i></div>
+    <div>
+      <div class="stat-num">{{ totale_assegnazioni }}</div>
+      <div class="stat-label">Assegnazioni</div>
+      <div class="stat-sub">totali nel sistema</div>
+    </div>
+  </a>
+  <a href="{% url 'gestionale:assegnazione_list' %}?scadenza=imminente" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon red"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <div>
+      <div class="stat-num">{{ scadenze_imminenti|length }}</div>
+      <div class="stat-label">Scadenze prossimi 30 gg</div>
+      <div class="stat-sub">{{ scadenze_imminenti|length }} cors{% if scadenze_imminenti|length == 1 %}o{% else %}i{% endif %} in scadenza</div>
+    </div>
+  </a>
+</div>
+
+<div class="dashboard-grid">
   <div class="card">
-    <div class="card-header"><div class="card-title">Stato assegnazioni</div></div>
+    <div class="card-header">
+      <div class="card-title">Stato assegnazioni</div>
+    </div>
     <div class="card-body" style="padding:0;">
       <table>
         <thead><tr><th>Stato</th><th>Totale</th></tr></thead>
         <tbody>
           {% for s in per_stato %}
-          <tr>
+          <tr class="clickable-row" data-href="{% url 'gestionale:assegnazione_list' %}?stato={{ s.stato }}">
             <td>
               {% if s.stato == 'completato' %}<span class="badge badge-success">Completato</span>
               {% elif s.stato == 'in_corso' %}<span class="badge badge-info">In corso</span>
@@ -62,7 +75,7 @@
             <td><strong>{{ s.n }}</strong></td>
           </tr>
           {% empty %}
-          <tr><td colspan="2" style="padding:20px;text-align:center;color:#64748b;">Nessun dato.</td></tr>
+          <tr><td colspan="2" style="padding:20px;text-align:center;color:#64748b;">Nessun dato disponibile.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -85,7 +98,7 @@
             <td><span class="badge badge-warning">{{ a.data_scadenza }}</span></td>
           </tr>
           {% empty %}
-          <tr><td colspan="3" style="padding:20px;text-align:center;color:#64748b;">Nessuna scadenza nei prossimi 30 giorni.</td></tr>
+          <tr><td colspan="3"><div class="empty-state-sm"><i class="bi bi-check-circle"></i><p>Nessuna scadenza nei prossimi 30 giorni.</p></div></td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -93,38 +106,91 @@
   </div>
 </div>
 
+<div class="dashboard-bottom">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Ultimi corsi inseriti</div>
+      <a href="{% url 'gestionale:corso_list' %}" class="btn btn-outline btn-sm">Vedi tutti</a>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead><tr><th>Titolo</th><th>Tipologia</th><th>Durata</th><th>Obbligatorio</th></tr></thead>
+        <tbody>
+          {% for c in ultimi_corsi %}
+          <tr class="clickable-row" data-href="{% url 'gestionale:corso_detail' c.pk %}">
+            <td>
+              <strong>{{ c.titolo }}</strong>
+              {% if c.vendor %}<br><span style="font-size:11px;color:#64748b;">{{ c.vendor }}</span>{% endif %}
+            </td>
+            <td><span class="badge badge-secondary">{{ c.tipologia }}</span></td>
+            <td style="white-space:nowrap;">{% if c.durata_ore %}{{ c.durata_ore }}h{% else %}—{% endif %}</td>
+            <td>{% if c.obbligatorio %}<span class="badge badge-danger">Sì</span>{% else %}<span class="badge badge-secondary">No</span>{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="padding:20px;text-align:center;color:#64748b;">Nessun corso presente.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Azioni rapide</div>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
+      <a href="{% url 'gestionale:assegnazione_create' %}" class="btn btn-primary btn-sm btn-block">+ Nuova assegnazione</a>
+      <a href="{% url 'gestionale:corso_list' %}" class="btn btn-outline btn-sm btn-block"><i class="bi bi-journal-bookmark-fill"></i> Gestisci corsi</a>
+      <a href="{% url 'gestionale:dipendente_list' %}" class="btn btn-outline btn-sm btn-block"><i class="bi bi-people-fill"></i> Gestisci dipendenti</a>
+      <a href="{% url 'gestionale:export_excel' %}" class="btn btn-outline btn-sm btn-block"><i class="bi bi-file-earmark-excel"></i> Esporta Excel</a>
+    </div>
+  </div>
+</div>
+
 {% else %}
 {# ── DIPENDENTE ── #}
 {% if dipendente %}
+
+<div class="dashboard-header">
+  <div class="dashboard-header-text">
+    <h1>Ciao, {{ dipendente.nome }} {{ dipendente.cognome }}</h1>
+    <p>Il tuo piano di formazione personale</p>
+  </div>
+</div>
+
 <div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-icon green">✅</div>
+  <a href="{% url 'gestionale:assegnazione_list' %}?stato=completato" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon green"><i class="bi bi-check-circle-fill"></i></div>
     <div>
       <div class="stat-num">{{ completati|length }}</div>
       <div class="stat-label">Completati</div>
+      <div class="stat-sub">corsi superati</div>
     </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon blue">▶️</div>
+  </a>
+  <a href="{% url 'gestionale:assegnazione_list' %}?stato=in_corso" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon blue"><i class="bi bi-play-circle-fill"></i></div>
     <div>
       <div class="stat-num">{{ in_corso|length }}</div>
       <div class="stat-label">In corso</div>
+      <div class="stat-sub">da completare</div>
     </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon yellow">🕐</div>
+  </a>
+  <a href="{% url 'gestionale:assegnazione_list' %}?stato=da_iniziare" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon yellow"><i class="bi bi-clock"></i></div>
     <div>
       <div class="stat-num">{{ da_iniziare|length }}</div>
       <div class="stat-label">Da iniziare</div>
+      <div class="stat-sub">in attesa di avvio</div>
     </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon red">⚠️</div>
+  </a>
+  <a href="{% url 'gestionale:assegnazione_list' %}?scadenza=imminente" class="stat-card" style="text-decoration:none;color:inherit;">
+    <div class="stat-icon red"><i class="bi bi-exclamation-triangle-fill"></i></div>
     <div>
       <div class="stat-num">{{ scadenze|length }}</div>
-      <div class="stat-label">Scadenze 30 gg</div>
+      <div class="stat-label">Scadenze prossimi 30 gg</div>
+      <div class="stat-sub">{{ scadenze|length }} cors{% if scadenze|length == 1 %}o{% else %}i{% endif %} in scadenza</div>
     </div>
-  </div>
+  </a>
 </div>
 
 {% if in_corso %}
@@ -153,7 +219,7 @@
 
 {% if scadenze %}
 <div class="card">
-  <div class="card-header"><div class="card-title">⚠️ Scadenze imminenti</div></div>
+  <div class="card-header"><div class="card-title">Scadenze imminenti</div></div>
   <div class="card-body" style="padding:0;">
     <table>
       <thead><tr><th>Corso</th><th>Scadenza</th></tr></thead>
@@ -173,7 +239,7 @@
 {% else %}
 <div class="card">
   <div class="card-body empty-state">
-    <div class="icon">👤</div>
+    <div class="icon"><i class="bi bi-person-x" style="font-size:48px;color:#94a3b8;"></i></div>
     <h3>Profilo non collegato</h3>
     <p>Il tuo account non è associato a nessun dipendente. Contatta l'amministratore.</p>
   </div>
@@ -181,4 +247,12 @@
 {% endif %}
 {% endif %}
 
+<script>
+document.querySelectorAll('.clickable-row').forEach(function(row) {
+  row.addEventListener('click', function(event) {
+    if (event.target.closest('a, button, input, select')) return;
+    window.location.href = row.dataset.href;
+  });
+});
+</script>
 {% endblock %}

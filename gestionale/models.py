@@ -2,6 +2,7 @@ from dateutil.relativedelta import relativedelta
 
 from django.db import models
 from django.utils import timezone
+from django.utils.timezone import localdate
 
 
 class Vendor(models.Model):
@@ -9,6 +10,8 @@ class Vendor(models.Model):
     sito_web = models.URLField(blank=True)
     contatto_email = models.EmailField(blank=True)
     note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = 'Vendor'
@@ -38,6 +41,8 @@ class Corso(models.Model):
     validita_mesi = models.PositiveIntegerField(default=0, help_text='0 = nessuna scadenza')
     obbligatorio = models.BooleanField(default=False)
     link_corso = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = 'Corsi'
@@ -64,6 +69,13 @@ class Dipendente(models.Model):
     email = models.EmailField(unique=True)
     reparto = models.CharField(max_length=100, blank=True, choices=REPARTO_CHOICES, db_index=True)
     attivo = models.BooleanField(default=True)
+    stipendio = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        null=True, blank=True,
+        verbose_name="Stipendio mensile (€)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = 'Dipendenti'
@@ -71,6 +83,25 @@ class Dipendente(models.Model):
 
     def __str__(self):
         return f'{self.cognome} {self.nome}'
+
+
+def _materiale_upload_path(instance, filename):
+    return f'materiali/{instance.corso_id}/{filename}'
+
+
+class MaterialeCorso(models.Model):
+    corso = models.ForeignKey(Corso, on_delete=models.CASCADE, related_name='materiali')
+    titolo = models.CharField(max_length=200)
+    file = models.FileField(upload_to=_materiale_upload_path)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Materiale Corso'
+        verbose_name_plural = 'Materiali Corso'
+        ordering = ['titolo']
+
+    def __str__(self):
+        return f'{self.corso} — {self.titolo}'
 
 
 class AssegnazioneCorso(models.Model):
@@ -83,13 +114,15 @@ class AssegnazioneCorso(models.Model):
 
     dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='assegnazioni', db_index=True)
     corso = models.ForeignKey(Corso, on_delete=models.CASCADE, related_name='assegnazioni', db_index=True)
-    data_assegnazione = models.DateField(default=timezone.now)
+    data_assegnazione = models.DateField(default=localdate)
     data_scadenza = models.DateField(null=True, blank=True)
     data_completamento = models.DateField(null=True, blank=True)
     stato = models.CharField(max_length=20, choices=STATO_CHOICES, default='da_iniziare', db_index=True)
     data_inizio_pianificata = models.DateField(null=True, blank=True)
     data_fine_pianificata = models.DateField(null=True, blank=True)
     certificato = models.FileField(upload_to='certificati/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Assegnazione Corso'

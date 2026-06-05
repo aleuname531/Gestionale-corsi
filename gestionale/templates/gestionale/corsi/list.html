@@ -37,7 +37,7 @@
 {% if corsi %}
 <div class="courses-grid">
   {% for corso in corsi %}
-  <div class="course-card">
+  <div class="course-card" data-href="{% url 'gestionale:corso_detail' corso.pk %}">
     <div class="course-card-top {% if corso.tipologia == 'Tecnico' %}blue{% elif corso.tipologia == 'Cloud' %}blue{% elif corso.tipologia == 'Analytics' %}purple{% elif corso.tipologia == 'Compliance' %}red{% elif corso.tipologia == 'Management' %}yellow{% else %}green{% endif %}"></div>
     <div class="course-card-body">
       {% if corso.vendor %}<div class="course-vendor">{{ corso.vendor.nome }}</div>{% endif %}
