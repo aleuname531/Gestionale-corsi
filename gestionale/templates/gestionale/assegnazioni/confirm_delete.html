@@ -1,0 +1,20 @@
+{% extends "gestionale/base.html" %}
+
+{% block title %}Elimina assegnazione — Gestione Formazione{% endblock %}
+{% block page_title %}Elimina assegnazione{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:480px;">
+  <div class="card-body">
+    <p style="font-size:15px;margin-bottom:20px;">
+      Sei sicuro di voler eliminare l'assegnazione di<br>
+      <strong>{{ object.dipendente }}</strong> → <strong>{{ object.corso.titolo }}</strong>?
+    </p>
+    <form method="post" style="display:flex;gap:10px;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Elimina definitivamente</button>
+      <a href="{% url 'gestionale:assegnazione_list' %}" class="btn btn-outline">Annulla</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

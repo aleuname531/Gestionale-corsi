@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Gestione Formazione{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'gestionale/css/dashboard.css' %}">
+</head>
+<body>
+<div class="app-layout">
+
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand">Gestione <span>Formazione</span></div>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar {% if request.user.is_staff %}avatar-admin{% else %}avatar-dipendente{% endif %}">
+        {{ request.user.username|first|upper }}
+      </div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="sidebar-user-role">{% if request.user.is_staff %}Amministratore{% else %}Dipendente{% endif %}</div>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-section">Navigazione</div>
+      <a href="{% url 'gestionale:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{% url 'gestionale:corso_list' %}" class="nav-item {% if 'corso' in request.resolver_match.url_name %}active{% endif %}">Corsi</a>
+      <a href="{% url 'gestionale:assegnazione_list' %}" class="nav-item {% if 'assegnazione' in request.resolver_match.url_name or 'certificato' in request.resolver_match.url_name %}active{% endif %}">Assegnazioni</a>
+      {% if request.user.is_staff %}
+      <a href="{% url 'gestionale:dipendente_list' %}" class="nav-item {% if 'dipendente' in request.resolver_match.url_name %}active{% endif %}">Dipendenti</a>
+      <a href="{% url 'gestionale:export_excel' %}" class="nav-item">Esporta Excel</a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-bottom">
+      <form method="post" action="{% url 'gestionale:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-logout">Esci</button>
+      </form>
+    </div>
+  </aside>
+
+  <main id="main-content">
+    <div class="topbar">
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+      <div class="topbar-right">{% block topbar_actions %}{% endblock %}</div>
+    </div>
+
+    {% if messages %}
+    <div style="padding:16px 28px 0;">
+      {% for msg in messages %}
+      <div style="padding:11px 16px;border-radius:8px;margin-bottom:8px;font-size:13px;font-weight:500;
+        background:{% if msg.level >= 40 %}#fef2f2{% elif msg.level >= 30 %}#fffbeb{% else %}#f0fdf4{% endif %};
+        border-left:4px solid {% if msg.level >= 40 %}#dc2626{% elif msg.level >= 30 %}#d97706{% else %}#16a34a{% endif %};
+        color:#1e293b;">{{ msg }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="page-content">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+</body>
+</html>

@@ -1,561 +1,415 @@
-import json
-import os
+from datetime import date, timedelta
 
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-from django.core.validators import URLValidator, validate_email
-from django.db import IntegrityError, transaction
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_http_methods
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.views import LoginView
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Q
+from django.http import HttpResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.views import View
+from django.views.generic import (
+    CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView,
+)
 
+from .forms import AssegnazioneCorsoForm, CertificatoForm, CorsoForm, DipendenteForm
 from .models import AssegnazioneCorso, Corso, Dipendente, Vendor
 
 
-@ensure_csrf_cookie
-def dashboard(request):
-    return render(request, 'gestionale/dashboard.html')
+class AdminRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff
 
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            raise PermissionDenied
+        return super().handle_no_permission()
 
-# ─── helpers ────────────────────────────────────────────────────────────────
 
-def _corso_to_dict(c):
-    return {
-        'id': c.pk,
-        'titolo': c.titolo,
-        'descrizione': c.descrizione,
-        'vendor': c.vendor.nome if c.vendor else '',
-        'vendor_id': c.vendor_id,
-        'tipologia': c.tipologia,
-        'durata_ore': c.durata_ore,
-        'validita_mesi': c.validita_mesi,
-        'obbligatorio': c.obbligatorio,
-        'link_corso': c.link_corso,
-    }
+# Form ridotto per dipendenti non-staff (definito a livello modulo, non ricreato ad ogni richiesta)
+class _UserAssegnazioneForm(AssegnazioneCorsoForm):
+    class Meta(AssegnazioneCorsoForm.Meta):
+        fields = ['stato', 'data_completamento']
 
 
-def _dipendente_to_dict(d):
-    return {
-        'id': d.pk,
-        'nome': d.nome,
-        'cognome': d.cognome,
-        'email': d.email,
-        'reparto': d.reparto,
-        'attivo': d.attivo,
-    }
+# ── Auth ──────────────────────────────────────────────────────────────────────
 
+class CustomLoginView(LoginView):
+    template_name = 'gestionale/login.html'
+    redirect_authenticated_user = True
 
-def _assegnazione_to_dict(a, request=None):
-    cert_url = None
-    if a.certificato:
-        cert_url = request.build_absolute_uri(a.certificato.url) if request else a.certificato.url
-    return {
-        'id': a.pk,
-        'dipendente_id': a.dipendente_id,
-        'corso_id': a.corso_id,
-        'stato': a.stato,
-        'data_assegnazione': str(a.data_assegnazione) if a.data_assegnazione else None,
-        'data_scadenza': str(a.data_scadenza) if a.data_scadenza else None,
-        'data_completamento': str(a.data_completamento) if a.data_completamento else None,
-        'data_inizio_pianificata': str(a.data_inizio_pianificata) if a.data_inizio_pianificata else None,
-        'data_fine_pianificata': str(a.data_fine_pianificata) if a.data_fine_pianificata else None,
-        'certificato_url': cert_url,
-        'certificato_nome': os.path.basename(a.certificato.name) if a.certificato else None,
-    }
 
+# ── Dashboard ─────────────────────────────────────────────────────────────────
 
-def _get_or_create_vendor(nome):
-    if not nome:
-        return None
-    v, _ = Vendor.objects.get_or_create(nome=nome.strip())
-    return v
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'gestionale/dashboard.html'
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        oggi = date.today()
+        fra_30 = oggi + timedelta(days=30)
 
-def _json_body(request):
-    try:
-        return json.loads(request.body or '{}')
-    except json.JSONDecodeError:
-        raise ValidationError('JSON non valido')
-
-
-def _error(message, status=400, **extra):
-    return JsonResponse({'error': message, **extra}, status=status)
-
-
-def _require_authenticated(request):
-    if not request.user.is_authenticated:
-        return _error('autenticazione richiesta', status=401)
-    return None
-
-
-def _is_admin(request):
-    return request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)
-
-
-def _app_email(request):
-    if not request.user.is_authenticated:
-        return ''
-    return (request.user.email or request.user.username or '').strip().lower()
-
-
-def _is_own_dipendente(request, dipendente):
-    return bool(dipendente.email and dipendente.email.lower() == _app_email(request))
-
-
-def _require_admin(request):
-    if not _is_admin(request):
-        return _error('permesso negato', status=403)
-    return None
-
-
-def _validate_corso_payload(data, partial=False):
-    errors = {}
-    titolo = (data.get('titolo') or '').strip()
-    if not partial or 'titolo' in data:
-        if not titolo:
-            errors['titolo'] = 'Il titolo è obbligatorio.'
-
-    link = (data.get('link_corso') or '').strip()
-    if link:
-        try:
-            URLValidator()(link)
-        except ValidationError:
-            errors['link_corso'] = 'Inserisci una URL valida.'
-
-    for field in ('durata_ore', 'validita_mesi'):
-        if field in data:
-            try:
-                if int(data.get(field) or 0) < 0:
-                    errors[field] = 'Il valore non può essere negativo.'
-            except (TypeError, ValueError):
-                errors[field] = 'Inserisci un numero valido.'
-
-    if errors:
-        raise ValidationError(errors)
-
-
-def _validate_dipendente_payload(data, partial=False):
-    errors = {}
-    for field in ('nome', 'cognome'):
-        if not partial or field in data:
-            if not (data.get(field) or '').strip():
-                errors[field] = 'Campo obbligatorio.'
-
-    if not partial or 'email' in data:
-        email = (data.get('email') or '').strip()
-        if not email:
-            errors['email'] = 'Email obbligatoria.'
-        else:
-            try:
-                validate_email(email)
-            except ValidationError:
-                errors['email'] = 'Email non valida.'
-
-    if errors:
-        raise ValidationError(errors)
-
-
-def _validate_assegnazione_dates(data):
-    data_inizio = _parse_date(data.get('data_inizio_pianificata'))
-    data_fine = _parse_date(data.get('data_fine_pianificata'))
-    data_completamento = _parse_date(data.get('data_completamento'))
-    if data.get('data_inizio_pianificata') and data_inizio is None:
-        raise ValidationError({'data_inizio_pianificata': 'Data non valida.'})
-    if data.get('data_fine_pianificata') and data_fine is None:
-        raise ValidationError({'data_fine_pianificata': 'Data non valida.'})
-    if data.get('data_completamento') and data_completamento is None:
-        raise ValidationError({'data_completamento': 'Data non valida.'})
-    if data_inizio and data_fine and data_fine < data_inizio:
-        raise ValidationError({'data_fine_pianificata': 'La data fine non può precedere la data inizio.'})
-    return data_inizio, data_fine, data_completamento
-
-
-def _validation_error_response(exc):
-    return _error('validazione fallita', errors=exc.message_dict if hasattr(exc, 'message_dict') else exc.messages)
-
-
-def _user_to_dict(user):
-    dipendente = Dipendente.objects.filter(email__iexact=user.email).first()
-    return {
-        'id': str(user.pk),
-        'nome': user.first_name or (dipendente.nome if dipendente else user.username),
-        'cognome': user.last_name or (dipendente.cognome if dipendente else ''),
-        'email': user.email,
-        'role': 'admin' if user.is_staff or user.is_superuser else 'dipendente',
-        'area': dipendente.reparto if dipendente else '',
-        '_dbId': dipendente.pk if dipendente else None,
-    }
-
-
-# ─── auth ───────────────────────────────────────────────────────────────────
-
-@require_http_methods(['GET'])
-def api_auth_me(request):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
-    return JsonResponse({'user': _user_to_dict(request.user)})
-
-
-@require_http_methods(['POST'])
-def api_auth_login(request):
-    try:
-        data = _json_body(request)
-    except ValidationError as exc:
-        return _validation_error_response(exc)
-
-    email = (data.get('email') or '').strip().lower()
-    password = data.get('password') or ''
-    username = email
-    user_by_email = User.objects.filter(email__iexact=email).first()
-    if user_by_email:
-        username = user_by_email.username
-
-    user = authenticate(request, username=username, password=password)
-    if user is None:
-        return _error('credenziali non valide', status=401)
-    if not user.is_active:
-        return _error('utente disattivato', status=403)
-
-    login(request, user)
-    return JsonResponse({'user': _user_to_dict(user)})
-
-
-@require_http_methods(['POST'])
-def api_auth_logout(request):
-    logout(request)
-    return JsonResponse({'ok': True})
-
-
-# ─── init (full data load) ───────────────────────────────────────────────────
-
-def api_init(request):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
-
-    corsi = [_corso_to_dict(c) for c in Corso.objects.select_related('vendor').all()]
-    if _is_admin(request):
-        dipendenti_qs = Dipendente.objects.all()
-        assegnazioni_qs = AssegnazioneCorso.objects.all()
-    else:
-        email = _app_email(request)
-        dipendenti_qs = Dipendente.objects.filter(email__iexact=email)
-        assegnazioni_qs = AssegnazioneCorso.objects.filter(dipendente__email__iexact=email)
-
-    dipendenti = [_dipendente_to_dict(d) for d in dipendenti_qs]
-    assegnazioni = [_assegnazione_to_dict(a, request) for a in assegnazioni_qs]
-    return JsonResponse({'corsi': corsi, 'dipendenti': dipendenti, 'assegnazioni': assegnazioni})
-
-
-# ─── corsi ───────────────────────────────────────────────────────────────────
-
-@require_http_methods(['GET', 'POST'])
-def api_corsi(request):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
-
-    if request.method == 'GET':
-        return JsonResponse({'corsi': [_corso_to_dict(c) for c in Corso.objects.select_related('vendor').all()]})
-
-    denied = _require_admin(request)
-    if denied:
-        return denied
-
-    try:
-        data = _json_body(request)
-        _validate_corso_payload(data)
-    except ValidationError as exc:
-        return _validation_error_response(exc)
-
-    with transaction.atomic():
-        corso = Corso.objects.create(
-            titolo=data.get('titolo', '').strip(),
-            descrizione=data.get('descrizione', ''),
-            vendor=_get_or_create_vendor(data.get('vendor', '')),
-            durata_ore=int(data.get('durata_ore') or 0),
-            validita_mesi=int(data.get('validita_mesi') or 0),
-            obbligatorio=bool(data.get('obbligatorio', False)),
-            link_corso=data.get('link_corso', '').strip(),
-        )
-    return JsonResponse(_corso_to_dict(corso), status=201)
-
-
-@require_http_methods(['GET', 'PUT', 'DELETE'])
-def api_corso_detail(request, pk):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
-
-    try:
-        corso = Corso.objects.select_related('vendor').get(pk=pk)
-    except Corso.DoesNotExist:
-        return JsonResponse({'error': 'not found'}, status=404)
-
-    if request.method == 'GET':
-        return JsonResponse(_corso_to_dict(corso))
-
-    denied = _require_admin(request)
-    if denied:
-        return denied
-
-    if request.method == 'DELETE':
-        corso.delete()
-        return JsonResponse({'ok': True})
-
-    try:
-        data = _json_body(request)
-        _validate_corso_payload(data, partial=True)
-    except ValidationError as exc:
-        return _validation_error_response(exc)
-
-    with transaction.atomic():
-        corso.titolo = data.get('titolo', corso.titolo).strip()
-        corso.descrizione = data.get('descrizione', corso.descrizione)
-        if 'vendor' in data:
-            corso.vendor = _get_or_create_vendor(data.get('vendor', ''))
-        if 'durata_ore' in data:
-            corso.durata_ore = int(data.get('durata_ore') or 0)
-        if 'validita_mesi' in data:
-            corso.validita_mesi = int(data.get('validita_mesi') or 0)
-        corso.obbligatorio = bool(data.get('obbligatorio', corso.obbligatorio))
-        corso.link_corso = data.get('link_corso', corso.link_corso).strip()
-        corso.save()
-    return JsonResponse(_corso_to_dict(corso))
-
-
-# ─── dipendenti ──────────────────────────────────────────────────────────────
-
-@require_http_methods(['GET', 'POST'])
-def api_dipendenti(request):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
-
-    if request.method == 'GET':
-        qs = Dipendente.objects.all() if _is_admin(request) else Dipendente.objects.filter(email__iexact=_app_email(request))
-        return JsonResponse({'dipendenti': [_dipendente_to_dict(d) for d in qs]})
-
-    try:
-        data = _json_body(request)
-        _validate_dipendente_payload(data)
-    except ValidationError as exc:
-        return _validation_error_response(exc)
-
-    email = (data.get('email') or '').strip().lower()
-    if not _is_admin(request) and email != _app_email(request):
-        return _error('permesso negato', status=403)
-
-    try:
-        with transaction.atomic():
-            dip = Dipendente.objects.create(
-                nome=data.get('nome', '').strip(),
-                cognome=data.get('cognome', '').strip(),
-                email=email,
-                reparto=data.get('reparto', ''),
-                attivo=bool(data.get('attivo', True)),
+        if self.request.user.is_staff:
+            ctx['totale_corsi'] = Corso.objects.count()
+            ctx['totale_dipendenti'] = Dipendente.objects.filter(attivo=True).count()
+            ctx['totale_assegnazioni'] = AssegnazioneCorso.objects.count()
+            ctx['scadenze_imminenti'] = (
+                AssegnazioneCorso.objects
+                .filter(data_scadenza__range=(oggi, fra_30))
+                .select_related('dipendente', 'corso')
+                .order_by('data_scadenza')[:10]
             )
-    except IntegrityError:
-        return _error('dipendente già presente', status=409)
-    return JsonResponse(_dipendente_to_dict(dip), status=201)
+            ctx['per_stato'] = (
+                AssegnazioneCorso.objects
+                .values('stato')
+                .annotate(n=Count('id'))
+                .order_by('stato')
+            )
+        else:
+            dip = Dipendente.objects.filter(email=self.request.user.email).first()
+            if dip:
+                qs = AssegnazioneCorso.objects.filter(dipendente=dip).select_related('corso')
+                ctx['dipendente'] = dip
+                ctx['in_corso'] = qs.filter(stato='in_corso')
+                ctx['da_iniziare'] = qs.filter(stato='da_iniziare')
+                ctx['completati'] = qs.filter(stato='completato')
+                ctx['scadenze'] = qs.filter(data_scadenza__range=(oggi, fra_30))
+        return ctx
 
 
-@require_http_methods(['GET', 'PUT', 'DELETE'])
-def api_dipendente_detail(request, pk):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
+# ── Corsi ─────────────────────────────────────────────────────────────────────
 
-    try:
-        dip = Dipendente.objects.get(pk=pk)
-    except Dipendente.DoesNotExist:
-        return JsonResponse({'error': 'not found'}, status=404)
+class CorsoListView(LoginRequiredMixin, ListView):
+    model = Corso
+    template_name = 'gestionale/corsi/list.html'
+    context_object_name = 'corsi'
 
-    if request.method == 'GET':
-        if not _is_admin(request) and not _is_own_dipendente(request, dip):
-            return _error('permesso negato', status=403)
-        return JsonResponse(_dipendente_to_dict(dip))
+    def get_queryset(self):
+        qs = Corso.objects.select_related('vendor')
+        q = self.request.GET.get('q')
+        tipologia = self.request.GET.get('tipologia')
+        vendor_id = self.request.GET.get('vendor')
+        if q:
+            qs = qs.filter(Q(titolo__icontains=q) | Q(descrizione__icontains=q))
+        if tipologia:
+            qs = qs.filter(tipologia=tipologia)
+        if vendor_id and vendor_id.isdigit():
+            qs = qs.filter(vendor_id=vendor_id)
+        return qs
 
-    if not _is_admin(request) and not _is_own_dipendente(request, dip):
-        return _error('permesso negato', status=403)
-
-    if request.method == 'DELETE':
-        denied = _require_admin(request)
-        if denied:
-            return denied
-        dip.delete()
-        return JsonResponse({'ok': True})
-
-    try:
-        data = _json_body(request)
-        _validate_dipendente_payload(data, partial=True)
-    except ValidationError as exc:
-        return _validation_error_response(exc)
-
-    new_email = (data.get('email', dip.email) or '').strip().lower()
-    if not _is_admin(request) and new_email != dip.email.lower():
-        return _error('permesso negato', status=403)
-
-    try:
-        with transaction.atomic():
-            dip.nome = data.get('nome', dip.nome).strip()
-            dip.cognome = data.get('cognome', dip.cognome).strip()
-            dip.email = new_email
-            dip.reparto = data.get('reparto', dip.reparto)
-            dip.attivo = bool(data.get('attivo', dip.attivo))
-            dip.save()
-    except IntegrityError:
-        return _error('email già usata', status=409)
-    return JsonResponse(_dipendente_to_dict(dip))
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['tipologie'] = Corso.TIPOLOGIA_CHOICES
+        ctx['vendors'] = Vendor.objects.all()
+        ctx['filtri'] = self.request.GET
+        return ctx
 
 
-# ─── assegnazioni ────────────────────────────────────────────────────────────
+class CorsoDetailView(LoginRequiredMixin, DetailView):
+    model = Corso
+    template_name = 'gestionale/corsi/detail.html'
+    context_object_name = 'corso'
 
-def _parse_date(val):
-    from datetime import date
-    if not val:
-        return None
-    try:
-        return date.fromisoformat(val)
-    except (ValueError, TypeError):
-        return None
-
-
-@require_http_methods(['GET', 'POST'])
-def api_assegnazioni(request):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
-
-    if request.method == 'GET':
-        qs = AssegnazioneCorso.objects.all() if _is_admin(request) else AssegnazioneCorso.objects.filter(dipendente__email__iexact=_app_email(request))
-        return JsonResponse({'assegnazioni': [_assegnazione_to_dict(a, request) for a in qs]})
-
-    try:
-        data = _json_body(request)
-        data_inizio, data_fine, data_completamento = _validate_assegnazione_dates(data)
-    except ValidationError as exc:
-        return _validation_error_response(exc)
-
-    try:
-        dip = Dipendente.objects.get(pk=data['dipendente_id'])
-        corso = Corso.objects.get(pk=data['corso_id'])
-    except (Dipendente.DoesNotExist, Corso.DoesNotExist, KeyError):
-        return JsonResponse({'error': 'dipendente o corso non trovato'}, status=400)
-
-    if not _is_admin(request) and not _is_own_dipendente(request, dip):
-        return _error('permesso negato', status=403)
-
-    if AssegnazioneCorso.objects.filter(dipendente=dip, corso=corso).exists():
-        return _error('il dipendente ha già questo corso', status=409)
-
-    with transaction.atomic():
-        assegnazione = AssegnazioneCorso.objects.create(
-            dipendente=dip,
-            corso=corso,
-            stato=data.get('stato', 'da_iniziare'),
-            data_inizio_pianificata=data_inizio,
-            data_fine_pianificata=data_fine,
-            data_completamento=data_completamento,
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['assegnazioni'] = (
+            self.object.assegnazioni
+            .select_related('dipendente')
+            .order_by('dipendente__cognome')
         )
-    return JsonResponse(_assegnazione_to_dict(assegnazione, request), status=201)
+        return ctx
 
 
-@require_http_methods(['GET', 'PUT', 'DELETE'])
-def api_assegnazione_detail(request, pk):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
+class CorsoCreateView(AdminRequiredMixin, CreateView):
+    model = Corso
+    form_class = CorsoForm
+    template_name = 'gestionale/corsi/form.html'
+    success_url = reverse_lazy('gestionale:corso_list')
 
-    try:
-        ass = AssegnazioneCorso.objects.get(pk=pk)
-    except AssegnazioneCorso.DoesNotExist:
-        return JsonResponse({'error': 'not found'}, status=404)
-
-    if request.method == 'GET':
-        if not _is_admin(request) and not _is_own_dipendente(request, ass.dipendente):
-            return _error('permesso negato', status=403)
-        return JsonResponse(_assegnazione_to_dict(ass, request))
-
-    if not _is_admin(request) and not _is_own_dipendente(request, ass.dipendente):
-        return _error('permesso negato', status=403)
-
-    if request.method == 'DELETE':
-        denied = _require_admin(request)
-        if denied:
-            return denied
-        if ass.certificato:
-            ass.certificato.delete(save=False)
-        ass.delete()
-        return JsonResponse({'ok': True})
-
-    try:
-        data = _json_body(request)
-        data_inizio, data_fine, data_completamento = _validate_assegnazione_dates(data)
-    except ValidationError as exc:
-        return _validation_error_response(exc)
-
-    with transaction.atomic():
-        ass.stato = data.get('stato', ass.stato)
-        if _is_admin(request):
-            if 'data_inizio_pianificata' in data:
-                ass.data_inizio_pianificata = data_inizio
-            if 'data_fine_pianificata' in data:
-                ass.data_fine_pianificata = data_fine
-        if 'data_completamento' in data:
-            ass.data_completamento = data_completamento
-        ass.save()
-    return JsonResponse(_assegnazione_to_dict(ass, request))
+    def form_valid(self, form):
+        messages.success(self.request, 'Corso creato con successo.')
+        return super().form_valid(form)
 
 
-# ─── certificato upload/delete ───────────────────────────────────────────────
+class CorsoUpdateView(AdminRequiredMixin, UpdateView):
+    model = Corso
+    form_class = CorsoForm
+    template_name = 'gestionale/corsi/form.html'
 
-@require_http_methods(['POST', 'DELETE'])
-def api_certificato(request, pk):
-    denied = _require_authenticated(request)
-    if denied:
-        return denied
+    def get_success_url(self):
+        return reverse_lazy('gestionale:corso_detail', kwargs={'pk': self.object.pk})
 
-    try:
-        ass = AssegnazioneCorso.objects.get(pk=pk)
-    except AssegnazioneCorso.DoesNotExist:
-        return JsonResponse({'error': 'not found'}, status=404)
+    def form_valid(self, form):
+        messages.success(self.request, 'Corso aggiornato.')
+        return super().form_valid(form)
 
-    if not _is_admin(request) and not _is_own_dipendente(request, ass.dipendente):
-        return _error('permesso negato', status=403)
 
-    if request.method == 'DELETE':
-        denied = None if _is_own_dipendente(request, ass.dipendente) else _require_admin(request)
-        if denied:
-            return denied
-        if ass.certificato:
-            ass.certificato.delete(save=False)
-            ass.certificato = None
-            ass.save()
-        return JsonResponse({'ok': True})
+class CorsoDeleteView(AdminRequiredMixin, DeleteView):
+    model = Corso
+    template_name = 'gestionale/corsi/confirm_delete.html'
+    success_url = reverse_lazy('gestionale:corso_list')
 
-    f = request.FILES.get('certificato')
-    if not f:
-        return JsonResponse({'error': 'nessun file'}, status=400)
+    def form_valid(self, form):
+        messages.success(self.request, 'Corso eliminato.')
+        return super().form_valid(form)
 
-    ext = os.path.splitext(f.name)[1].lower()
-    allowed_extensions = {'.pdf', '.docx'}
-    allowed_types = {
-        'application/pdf',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    }
-    if ext not in allowed_extensions or f.content_type not in allowed_types:
-        return _error('formato certificato non valido: usa PDF o DOCX', status=400)
 
-    with transaction.atomic():
-        if ass.certificato:
-            ass.certificato.delete(save=False)
-        ass.certificato = f
-        ass.save()
-    return JsonResponse({
-        'certificato_url': request.build_absolute_uri(ass.certificato.url),
-        'certificato_nome': os.path.basename(ass.certificato.name),
-    })
+# ── Dipendenti ────────────────────────────────────────────────────────────────
+
+class DipendenteListView(AdminRequiredMixin, ListView):
+    model = Dipendente
+    template_name = 'gestionale/dipendenti/list.html'
+    context_object_name = 'dipendenti'
+
+    def get_queryset(self):
+        qs = Dipendente.objects.all()
+        q = self.request.GET.get('q')
+        reparto = self.request.GET.get('reparto')
+        if q:
+            qs = qs.filter(
+                Q(nome__icontains=q) | Q(cognome__icontains=q) | Q(email__icontains=q)
+            )
+        if reparto:
+            qs = qs.filter(reparto=reparto)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['reparti'] = Dipendente.REPARTO_CHOICES
+        ctx['filtri'] = self.request.GET
+        return ctx
+
+
+class DipendenteDetailView(LoginRequiredMixin, DetailView):
+    model = Dipendente
+    template_name = 'gestionale/dipendenti/detail.html'
+    context_object_name = 'dipendente'
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        if not self.request.user.is_staff and obj.email != self.request.user.email:
+            raise PermissionDenied
+        return obj
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['assegnazioni'] = (
+            self.object.assegnazioni
+            .select_related('corso')
+            .order_by('data_scadenza')
+        )
+        return ctx
+
+
+class DipendenteCreateView(AdminRequiredMixin, CreateView):
+    model = Dipendente
+    form_class = DipendenteForm
+    template_name = 'gestionale/dipendenti/form.html'
+    success_url = reverse_lazy('gestionale:dipendente_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Dipendente creato con successo.')
+        return super().form_valid(form)
+
+
+class DipendenteUpdateView(LoginRequiredMixin, UpdateView):
+    model = Dipendente
+    form_class = DipendenteForm
+    template_name = 'gestionale/dipendenti/form.html'
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        if not self.request.user.is_staff and obj.email != self.request.user.email:
+            raise PermissionDenied
+        return obj
+
+    def get_success_url(self):
+        return reverse_lazy('gestionale:dipendente_detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Dipendente aggiornato.')
+        return super().form_valid(form)
+
+
+# ── Assegnazioni ──────────────────────────────────────────────────────────────
+
+class AssegnazioneListView(LoginRequiredMixin, ListView):
+    model = AssegnazioneCorso
+    template_name = 'gestionale/assegnazioni/list.html'
+    context_object_name = 'assegnazioni'
+    paginate_by = 50
+
+    def get_queryset(self):
+        qs = AssegnazioneCorso.objects.select_related('dipendente', 'corso', 'corso__vendor')
+        if not self.request.user.is_staff:
+            dip = Dipendente.objects.filter(email=self.request.user.email).first()
+            qs = qs.filter(dipendente=dip) if dip else qs.none()
+
+        stato = self.request.GET.get('stato')
+        q = self.request.GET.get('q')
+        scadenza = self.request.GET.get('scadenza')
+
+        if stato:
+            qs = qs.filter(stato=stato)
+        if q:
+            qs = qs.filter(
+                Q(dipendente__cognome__icontains=q) |
+                Q(dipendente__nome__icontains=q) |
+                Q(corso__titolo__icontains=q)
+            )
+        if scadenza == 'imminente':
+            oggi = date.today()
+            qs = qs.filter(data_scadenza__range=(oggi, oggi + timedelta(days=30)))
+        elif scadenza == 'scaduto':
+            qs = qs.filter(data_scadenza__lt=date.today())
+
+        return qs.order_by('data_scadenza')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['stati'] = AssegnazioneCorso.STATO_CHOICES
+        ctx['filtri'] = self.request.GET
+        return ctx
+
+
+class AssegnazioneCreateView(AdminRequiredMixin, CreateView):
+    model = AssegnazioneCorso
+    form_class = AssegnazioneCorsoForm
+    template_name = 'gestionale/assegnazioni/form.html'
+    success_url = reverse_lazy('gestionale:assegnazione_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Assegnazione creata.')
+        return super().form_valid(form)
+
+
+class AssegnazioneUpdateView(LoginRequiredMixin, UpdateView):
+    model = AssegnazioneCorso
+    template_name = 'gestionale/assegnazioni/form.html'
+    success_url = reverse_lazy('gestionale:assegnazione_list')
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        if not self.request.user.is_staff and obj.dipendente.email != self.request.user.email:
+            raise PermissionDenied
+        return obj
+
+    def get_form_class(self):
+        if not self.request.user.is_staff:
+            return _UserAssegnazioneForm
+        return AssegnazioneCorsoForm
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Assegnazione aggiornata.')
+        return super().form_valid(form)
+
+
+class AssegnazioneDeleteView(AdminRequiredMixin, DeleteView):
+    model = AssegnazioneCorso
+    template_name = 'gestionale/assegnazioni/confirm_delete.html'
+    success_url = reverse_lazy('gestionale:assegnazione_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Assegnazione eliminata.')
+        return super().form_valid(form)
+
+
+# ── Certificato ───────────────────────────────────────────────────────────────
+
+class CertificatoUploadView(LoginRequiredMixin, View):
+    template_name = 'gestionale/assegnazioni/certificato_form.html'
+
+    def _check_access(self, request, assegnazione):
+        return request.user.is_staff or assegnazione.dipendente.email == request.user.email
+
+    def get(self, request, pk):
+        assegnazione = get_object_or_404(
+            AssegnazioneCorso.objects.select_related('dipendente', 'corso'), pk=pk
+        )
+        if not self._check_access(request, assegnazione):
+            return HttpResponseForbidden()
+        return render(request, self.template_name, {
+            'form': CertificatoForm(),
+            'assegnazione': assegnazione,
+        })
+
+    def post(self, request, pk):
+        assegnazione = get_object_or_404(
+            AssegnazioneCorso.objects.select_related('dipendente', 'corso'), pk=pk
+        )
+        if not self._check_access(request, assegnazione):
+            return HttpResponseForbidden()
+        form = CertificatoForm(request.POST, request.FILES)
+        if form.is_valid():
+            if assegnazione.certificato:
+                assegnazione.certificato.delete(save=False)
+            assegnazione.certificato = form.cleaned_data['certificato']
+            assegnazione.save()
+            messages.success(request, 'Certificato caricato.')
+            return redirect('gestionale:assegnazione_list')
+        return render(request, self.template_name, {
+            'form': form,
+            'assegnazione': assegnazione,
+        })
+
+
+class CertificatoDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        assegnazione = get_object_or_404(
+            AssegnazioneCorso.objects.select_related('dipendente'), pk=pk
+        )
+        if not request.user.is_staff and assegnazione.dipendente.email != request.user.email:
+            return HttpResponseForbidden()
+        if assegnazione.certificato:
+            assegnazione.certificato.delete(save=False)
+            assegnazione.certificato = None
+            assegnazione.save()
+            messages.success(request, 'Certificato eliminato.')
+        return redirect('gestionale:assegnazione_list')
+
+
+# ── Excel Export ──────────────────────────────────────────────────────────────
+
+class ExportExcelView(AdminRequiredMixin, View):
+    def get(self, request):
+        try:
+            import openpyxl
+        except ImportError:
+            messages.error(request, 'openpyxl non installato. Esegui: pip install openpyxl')
+            return redirect('gestionale:assegnazione_list')
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Formazione'
+        ws.append([
+            'Cognome', 'Nome', 'Email', 'Reparto',
+            'Vendor', 'Corso', 'Tipologia',
+            'Stato', 'Data Assegnazione', 'Data Completamento', 'Data Scadenza',
+        ])
+        qs = (
+            AssegnazioneCorso.objects
+            .select_related('dipendente', 'corso', 'corso__vendor')
+            .order_by('dipendente__cognome', 'corso__titolo')
+        )
+        for a in qs:
+            ws.append([
+                a.dipendente.cognome,
+                a.dipendente.nome,
+                a.dipendente.email,
+                a.dipendente.reparto,
+                a.corso.vendor.nome if a.corso.vendor else '',
+                a.corso.titolo,
+                a.corso.tipologia,
+                a.get_stato_display(),
+                a.data_assegnazione,
+                a.data_completamento,
+                a.data_scadenza,
+            ])
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="formazione.xlsx"'
+        wb.save(response)
+        return response

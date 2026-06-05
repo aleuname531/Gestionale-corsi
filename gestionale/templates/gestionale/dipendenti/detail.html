@@ -1,0 +1,70 @@
+{% extends "gestionale/base.html" %}
+
+{% block title %}{{ dipendente }} — Gestione Formazione{% endblock %}
+{% block page_title %}{{ dipendente.cognome }} {{ dipendente.nome }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'gestionale:dipendente_update' dipendente.pk %}" class="btn btn-outline btn-sm">Modifica</a>
+{% endblock %}
+
+{% block content %}
+{% if request.user.is_staff %}
+<a href="{% url 'gestionale:dipendente_list' %}" class="back-btn">← Torna ai dipendenti</a>
+{% endif %}
+
+<div class="detail-header" style="margin-bottom:20px;">
+  <div class="detail-meta">
+    <span class="badge badge-secondary">{{ dipendente.reparto }}</span>
+    {% if dipendente.attivo %}<span class="badge badge-success">Attivo</span>{% else %}<span class="badge badge-danger">Inattivo</span>{% endif %}
+  </div>
+  <div style="color:#64748b;font-size:14px;margin-top:6px;">{{ dipendente.email }}</div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Assegnazioni corsi ({{ assegnazioni|length }})</div>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Corso</th>
+          <th>Stato</th>
+          <th>Completamento</th>
+          <th>Scadenza</th>
+          <th>Certificato</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assegnazioni %}
+        <tr>
+          <td>{{ a.corso.titolo }}</td>
+          <td>
+            {% if a.stato == 'completato' %}<span class="badge badge-success">Completato</span>
+            {% elif a.stato == 'in_corso' %}<span class="badge badge-info">In corso</span>
+            {% elif a.stato == 'da_iniziare' %}<span class="badge badge-secondary">Da iniziare</span>
+            {% else %}<span class="badge badge-danger">Scaduto</span>{% endif %}
+          </td>
+          <td>{{ a.data_completamento|default:"—" }}</td>
+          <td>{{ a.data_scadenza|default:"—" }}</td>
+          <td>
+            {% if a.certificato %}
+            <a href="{{ a.certificato.url }}" target="_blank" class="btn btn-outline btn-sm">Scarica</a>
+            {% else %}—{% endif %}
+          </td>
+          <td class="td-actions">
+            <a href="{% url 'gestionale:assegnazione_update' a.pk %}" class="btn btn-outline btn-sm">Modifica</a>
+            <a href="{% url 'gestionale:certificato_upload' a.pk %}" class="btn btn-sm" style="background:#f1f5f9;color:#1e293b;">Certificato</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="padding:24px;text-align:center;color:#64748b;">Nessuna assegnazione.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

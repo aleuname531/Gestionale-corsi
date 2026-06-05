@@ -1,0 +1,71 @@
+{% extends "gestionale/base.html" %}
+
+{% block title %}Corsi — Gestione Formazione{% endblock %}
+{% block page_title %}Corsi{% endblock %}
+
+{% block topbar_actions %}
+  {% if request.user.is_staff %}
+  <a href="{% url 'gestionale:corso_create' %}" class="btn btn-primary btn-sm">+ Nuovo corso</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:10px;flex:1;flex-wrap:wrap;align-items:center;">
+    <div class="search-wrap">
+      <input type="text" name="q" class="search-input" placeholder="Cerca per titolo o descrizione…" value="{{ filtri.q }}">
+    </div>
+    <select name="tipologia" class="filter-select">
+      <option value="">Tutte le tipologie</option>
+      {% for val, label in tipologie %}
+      <option value="{{ val }}" {% if filtri.tipologia == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="vendor" class="filter-select">
+      <option value="">Tutti i vendor</option>
+      {% for v in vendors %}
+      <option value="{{ v.pk }}" {% if filtri.vendor == v.pk|stringformat:"s" %}selected{% endif %}>{{ v.nome }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">Filtra</button>
+    {% if filtri.q or filtri.tipologia or filtri.vendor %}
+    <a href="{% url 'gestionale:corso_list' %}" class="btn btn-outline btn-sm">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if corsi %}
+<div class="courses-grid">
+  {% for corso in corsi %}
+  <div class="course-card">
+    <div class="course-card-top {% if corso.tipologia == 'Tecnico' %}blue{% elif corso.tipologia == 'Cloud' %}blue{% elif corso.tipologia == 'Analytics' %}purple{% elif corso.tipologia == 'Compliance' %}red{% elif corso.tipologia == 'Management' %}yellow{% else %}green{% endif %}"></div>
+    <div class="course-card-body">
+      {% if corso.vendor %}<div class="course-vendor">{{ corso.vendor.nome }}</div>{% endif %}
+      <div class="course-title">{{ corso.titolo }}</div>
+      <div class="course-meta">
+        <span class="badge badge-secondary">{{ corso.tipologia }}</span>
+        {% if corso.obbligatorio %}<span class="badge badge-danger">Obbligatorio</span>{% endif %}
+        {% if corso.durata_ore %}<span class="badge badge-info">{{ corso.durata_ore }}h</span>{% endif %}
+      </div>
+      {% if corso.descrizione %}<p style="font-size:12px;color:#64748b;margin-bottom:10px;">{{ corso.descrizione|truncatechars:100 }}</p>{% endif %}
+    </div>
+    <div class="course-footer">
+      <a href="{% url 'gestionale:corso_detail' corso.pk %}" class="btn btn-outline btn-sm">Dettaglio</a>
+      {% if request.user.is_staff %}
+      <div style="display:flex;gap:6px;">
+        <a href="{% url 'gestionale:corso_update' corso.pk %}" class="btn btn-sm" style="background:#f1f5f9;color:#1e293b;">Modifica</a>
+        <a href="{% url 'gestionale:corso_delete' corso.pk %}" class="btn btn-danger btn-sm">Elimina</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="icon">📚</div>
+  <h3>Nessun corso trovato</h3>
+  <p>{% if filtri.q or filtri.tipologia or filtri.vendor %}Prova a modificare i filtri.{% else %}Nessun corso presente.{% endif %}</p>
+</div>
+{% endif %}
+{% endblock %}

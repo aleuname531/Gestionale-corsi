@@ -1,97 +1,184 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="csrf-token" content="{{ csrf_token }}">
-<title>Beta80 — Gestione Formazione Aziendale</title>
-<link rel="stylesheet" href="{% static 'gestionale/css/dashboard.css' %}">
-</head>
-<body>
+{% extends "gestionale/base.html" %}
 
-<!-- ═══ LOGIN PAGE ═══════════════════════════════════════════ -->
-<div id="login-page">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="brand">Beta<span>80</span></div>
-      <p>Portale Gestione Formazione Aziendale</p>
+{% block title %}Dashboard — Gestione Formazione{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+  {% if request.user.is_staff %}
+  <a href="{% url 'gestionale:assegnazione_create' %}" class="btn btn-primary btn-sm">+ Nuova assegnazione</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if request.user.is_staff %}
+{# ── ADMIN ── #}
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon blue">📚</div>
+    <div>
+      <div class="stat-num">{{ totale_corsi }}</div>
+      <div class="stat-label">Corsi totali</div>
     </div>
-    <h2>Accedi al portale</h2>
-    <div class="login-error" id="login-error">Email o password non corretti.</div>
-    <div class="form-group">
-      <label>Email aziendale</label>
-      <input class="form-control" type="email" id="login-email" placeholder="nome@beta80group.it" value="">
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green">👥</div>
+    <div>
+      <div class="stat-num">{{ totale_dipendenti }}</div>
+      <div class="stat-label">Dipendenti attivi</div>
     </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input class="form-control" type="password" id="login-pwd" placeholder="••••••••">
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon yellow">📋</div>
+    <div>
+      <div class="stat-num">{{ totale_assegnazioni }}</div>
+      <div class="stat-label">Assegnazioni</div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="doLogin()" style="margin-top:8px">Accedi</button>
-    <div class="demo-hint">
-      <strong>Demo credenziali:</strong><br>
-      👑 Admin: <code>admin@beta80group.it</code> / <code>admin123</code><br>
-      👤 Dipendente: <code>rossi.mario@beta80group.it</code> / <code>pass123</code>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon red">⚠️</div>
+    <div>
+      <div class="stat-num">{{ scadenze_imminenti|length }}</div>
+      <div class="stat-label">Scadenze 30 gg</div>
     </div>
   </div>
 </div>
 
-<!-- ═══ APP ════════════════════════════════════════════════════ -->
-<div id="app">
-  <div class="app-layout">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+  <div class="card">
+    <div class="card-header"><div class="card-title">Stato assegnazioni</div></div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead><tr><th>Stato</th><th>Totale</th></tr></thead>
+        <tbody>
+          {% for s in per_stato %}
+          <tr>
+            <td>
+              {% if s.stato == 'completato' %}<span class="badge badge-success">Completato</span>
+              {% elif s.stato == 'in_corso' %}<span class="badge badge-info">In corso</span>
+              {% elif s.stato == 'da_iniziare' %}<span class="badge badge-secondary">Da iniziare</span>
+              {% else %}<span class="badge badge-danger">Scaduto</span>{% endif %}
+            </td>
+            <td><strong>{{ s.n }}</strong></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="2" style="padding:20px;text-align:center;color:#64748b;">Nessun dato.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    <!-- SIDEBAR -->
-    <aside id="sidebar">
-      <div class="sidebar-brand" onclick="navigate('dashboard')" style="cursor:pointer">
-        <div class="brand">Beta<span>80</span></div>
-        <small>Formazione Aziendale</small>
-      </div>
-      <div class="sidebar-user">
-        <div class="avatar" id="sb-avatar"></div>
-        <div class="sidebar-user-info">
-          <div class="sidebar-user-name" id="sb-name"></div>
-          <div class="sidebar-user-role" id="sb-role"></div>
-        </div>
-      </div>
-      <nav id="nav-menu"></nav>
-      <div class="sidebar-bottom">
-        <button class="btn-logout" onclick="doLogout()">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
-          Esci
-        </button>
-      </div>
-    </aside>
-
-    <!-- MAIN -->
-    <div id="main-content">
-      <div class="topbar">
-        <div class="topbar-title" id="topbar-title">Dashboard</div>
-        <div class="topbar-right" id="topbar-right"></div>
-      </div>
-      <div class="page-content" id="page-content"></div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Scadenze imminenti</div>
+      <a href="{% url 'gestionale:assegnazione_list' %}?scadenza=imminente" class="btn btn-outline btn-sm">Vedi tutte</a>
+    </div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead><tr><th>Dipendente</th><th>Corso</th><th>Scadenza</th></tr></thead>
+        <tbody>
+          {% for a in scadenze_imminenti %}
+          <tr>
+            <td>{{ a.dipendente }}</td>
+            <td>{{ a.corso.titolo }}</td>
+            <td><span class="badge badge-warning">{{ a.data_scadenza }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" style="padding:20px;text-align:center;color:#64748b;">Nessuna scadenza nei prossimi 30 giorni.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<!-- ═══ MODAL ══════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
-  <div class="modal" id="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title"></div>
-      <button class="modal-close" onclick="closeModal()">×</button>
+{% else %}
+{# ── DIPENDENTE ── #}
+{% if dipendente %}
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon green">✅</div>
+    <div>
+      <div class="stat-num">{{ completati|length }}</div>
+      <div class="stat-label">Completati</div>
     </div>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon blue">▶️</div>
+    <div>
+      <div class="stat-num">{{ in_corso|length }}</div>
+      <div class="stat-label">In corso</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon yellow">🕐</div>
+    <div>
+      <div class="stat-num">{{ da_iniziare|length }}</div>
+      <div class="stat-label">Da iniziare</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon red">⚠️</div>
+    <div>
+      <div class="stat-num">{{ scadenze|length }}</div>
+      <div class="stat-label">Scadenze 30 gg</div>
+    </div>
   </div>
 </div>
 
-<!-- ═══ TOAST ══════════════════════════════════════════════════ -->
-<div id="toast-container"></div>
+{% if in_corso %}
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <div class="card-title">Corsi in corso</div>
+    <a href="{% url 'gestionale:assegnazione_list' %}" class="btn btn-outline btn-sm">Vedi tutti</a>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <table>
+      <thead><tr><th>Corso</th><th>Inizio</th><th>Fine</th><th></th></tr></thead>
+      <tbody>
+        {% for a in in_corso %}
+        <tr>
+          <td>{{ a.corso.titolo }}</td>
+          <td>{{ a.data_inizio_pianificata|default:"—" }}</td>
+          <td>{{ a.data_fine_pianificata|default:"—" }}</td>
+          <td><a href="{% url 'gestionale:assegnazione_update' a.pk %}" class="btn btn-outline btn-sm">Aggiorna</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 
-<script src="{% static 'gestionale/js/xlsx.full.min.js' %}"></script>
-<script src="{% static 'gestionale/js/storage.js' %}"></script>
-<script src="{% static 'gestionale/js/api.js' %}"></script>
-<script src="{% static 'gestionale/js/auth.js' %}"></script>
-<script src="{% static 'gestionale/js/dashboard.js' %}"></script>
-</body>
-</html>
+{% if scadenze %}
+<div class="card">
+  <div class="card-header"><div class="card-title">⚠️ Scadenze imminenti</div></div>
+  <div class="card-body" style="padding:0;">
+    <table>
+      <thead><tr><th>Corso</th><th>Scadenza</th></tr></thead>
+      <tbody>
+        {% for a in scadenze %}
+        <tr>
+          <td>{{ a.corso.titolo }}</td>
+          <td><span class="badge badge-warning">{{ a.data_scadenza }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+  <div class="card-body empty-state">
+    <div class="icon">👤</div>
+    <h3>Profilo non collegato</h3>
+    <p>Il tuo account non è associato a nessun dipendente. Contatta l'amministratore.</p>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% endblock %}

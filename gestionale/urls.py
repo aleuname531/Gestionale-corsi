@@ -1,27 +1,39 @@
+from django.contrib.auth.views import LogoutView
 from django.urls import path
+
 from . import views
 
+app_name = 'gestionale'
+
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
+    # Auth
+    path('login/', views.CustomLoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(next_page='gestionale:login'), name='logout'),
 
-    # auth
-    path('api/auth/me/', views.api_auth_me, name='api_auth_me'),
-    path('api/auth/login/', views.api_auth_login, name='api_auth_login'),
-    path('api/auth/logout/', views.api_auth_logout, name='api_auth_logout'),
+    # Dashboard
+    path('', views.DashboardView.as_view(), name='dashboard'),
 
-    # init
-    path('api/init/', views.api_init, name='api_init'),
+    # Corsi
+    path('corsi/', views.CorsoListView.as_view(), name='corso_list'),
+    path('corsi/nuovo/', views.CorsoCreateView.as_view(), name='corso_create'),
+    path('corsi/<int:pk>/', views.CorsoDetailView.as_view(), name='corso_detail'),
+    path('corsi/<int:pk>/modifica/', views.CorsoUpdateView.as_view(), name='corso_update'),
+    path('corsi/<int:pk>/elimina/', views.CorsoDeleteView.as_view(), name='corso_delete'),
 
-    # corsi
-    path('api/corsi/', views.api_corsi, name='api_corsi'),
-    path('api/corsi/<int:pk>/', views.api_corso_detail, name='api_corso_detail'),
+    # Dipendenti
+    path('dipendenti/', views.DipendenteListView.as_view(), name='dipendente_list'),
+    path('dipendenti/nuovo/', views.DipendenteCreateView.as_view(), name='dipendente_create'),
+    path('dipendenti/<int:pk>/', views.DipendenteDetailView.as_view(), name='dipendente_detail'),
+    path('dipendenti/<int:pk>/modifica/', views.DipendenteUpdateView.as_view(), name='dipendente_update'),
 
-    # dipendenti
-    path('api/dipendenti/', views.api_dipendenti, name='api_dipendenti'),
-    path('api/dipendenti/<int:pk>/', views.api_dipendente_detail, name='api_dipendente_detail'),
+    # Assegnazioni
+    path('assegnazioni/', views.AssegnazioneListView.as_view(), name='assegnazione_list'),
+    path('assegnazioni/nuova/', views.AssegnazioneCreateView.as_view(), name='assegnazione_create'),
+    path('assegnazioni/<int:pk>/modifica/', views.AssegnazioneUpdateView.as_view(), name='assegnazione_update'),
+    path('assegnazioni/<int:pk>/elimina/', views.AssegnazioneDeleteView.as_view(), name='assegnazione_delete'),
+    path('assegnazioni/<int:pk>/certificato/', views.CertificatoUploadView.as_view(), name='certificato_upload'),
+    path('assegnazioni/<int:pk>/certificato/elimina/', views.CertificatoDeleteView.as_view(), name='certificato_delete'),
 
-    # assegnazioni
-    path('api/assegnazioni/', views.api_assegnazioni, name='api_assegnazioni'),
-    path('api/assegnazioni/<int:pk>/', views.api_assegnazione_detail, name='api_assegnazione_detail'),
-    path('api/assegnazioni/<int:pk>/certificato/', views.api_certificato, name='api_certificato'),
+    # Export
+    path('export/excel/', views.ExportExcelView.as_view(), name='export_excel'),
 ]

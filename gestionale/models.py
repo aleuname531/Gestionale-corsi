@@ -1,9 +1,11 @@
-import os
+from dateutil.relativedelta import relativedelta
 
 from django.db import models
 from django.utils import timezone
+
+
 class Vendor(models.Model):
-    nome = models.CharField(max_length=200)
+    nome = models.CharField(max_length=200, unique=True)
     sito_web = models.URLField(blank=True)
     contatto_email = models.EmailField(blank=True)
     note = models.TextField(blank=True)
@@ -15,7 +17,7 @@ class Vendor(models.Model):
     def __str__(self):
         return self.nome
 
-# Modello per i corsi, con riferimento al vendor e campi per durata, validità, obbligatorietà e link al corso
+
 class Corso(models.Model):
     TIPOLOGIA_CHOICES = [
         ('Tecnico', 'Tecnico'),
@@ -44,12 +46,23 @@ class Corso(models.Model):
     def __str__(self):
         return self.titolo
 
-# Modello per i dipendenti, con campi per nome, cognome, email, reparto e stato attivo
+
 class Dipendente(models.Model):
+    REPARTO_CHOICES = [
+        ('IT', 'IT'),
+        ('HR', 'HR'),
+        ('PM', 'PM'),
+        ('RPA', 'RPA'),
+        ('Finance', 'Finance'),
+        ('Sales', 'Sales'),
+        ('Operations', 'Operations'),
+        ('Altro', 'Altro'),
+    ]
+
     nome = models.CharField(max_length=100)
     cognome = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    reparto = models.CharField(max_length=100, blank=True)
+    reparto = models.CharField(max_length=100, blank=True, choices=REPARTO_CHOICES, db_index=True)
     attivo = models.BooleanField(default=True)
 
     class Meta:
@@ -59,7 +72,7 @@ class Dipendente(models.Model):
     def __str__(self):
         return f'{self.cognome} {self.nome}'
 
-# Modello per l'assegnazione dei corsi ai dipendenti, con campi per data di assegnazione, scadenza, completamento, stato e certificato
+
 class AssegnazioneCorso(models.Model):
     STATO_CHOICES = [
         ('da_iniziare', 'Da iniziare'),
@@ -68,12 +81,12 @@ class AssegnazioneCorso(models.Model):
         ('scaduto', 'Scaduto'),
     ]
 
-    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='assegnazioni')
-    corso = models.ForeignKey(Corso, on_delete=models.CASCADE, related_name='assegnazioni')
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='assegnazioni', db_index=True)
+    corso = models.ForeignKey(Corso, on_delete=models.CASCADE, related_name='assegnazioni', db_index=True)
     data_assegnazione = models.DateField(default=timezone.now)
     data_scadenza = models.DateField(null=True, blank=True)
     data_completamento = models.DateField(null=True, blank=True)
-    stato = models.CharField(max_length=20, choices=STATO_CHOICES, default='da_iniziare')
+    stato = models.CharField(max_length=20, choices=STATO_CHOICES, default='da_iniziare', db_index=True)
     data_inizio_pianificata = models.DateField(null=True, blank=True)
     data_fine_pianificata = models.DateField(null=True, blank=True)
     certificato = models.FileField(upload_to='certificati/', null=True, blank=True)
@@ -89,6 +102,5 @@ class AssegnazioneCorso(models.Model):
 
     def save(self, *args, **kwargs):
         if self.data_completamento and self.corso.validita_mesi:
-            from dateutil.relativedelta import relativedelta
             self.data_scadenza = self.data_completamento + relativedelta(months=self.corso.validita_mesi)
         super().save(*args, **kwargs)

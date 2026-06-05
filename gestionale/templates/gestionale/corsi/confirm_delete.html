@@ -1,0 +1,20 @@
+{% extends "gestionale/base.html" %}
+
+{% block title %}Elimina corso — Gestione Formazione{% endblock %}
+{% block page_title %}Elimina corso{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:480px;">
+  <div class="card-body">
+    <p style="font-size:15px;margin-bottom:20px;">
+      Sei sicuro di voler eliminare il corso <strong>{{ object.titolo }}</strong>?<br>
+      <span style="color:#ef4444;font-size:13px;">Tutte le assegnazioni associate verranno eliminate.</span>
+    </p>
+    <form method="post" style="display:flex;gap:10px;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Elimina definitivamente</button>
+      <a href="{% url 'gestionale:corso_detail' object.pk %}" class="btn btn-outline">Annulla</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

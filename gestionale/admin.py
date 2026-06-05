@@ -11,8 +11,8 @@ class VendorAdmin(admin.ModelAdmin):
 
 @admin.register(Corso)
 class CorsoAdmin(admin.ModelAdmin):
-    list_display = ('titolo', 'vendor', 'durata_ore', 'validita_mesi', 'obbligatorio')
-    list_filter = ('vendor', 'obbligatorio')
+    list_display = ('titolo', 'vendor', 'tipologia', 'durata_ore', 'validita_mesi', 'obbligatorio')
+    list_filter = ('tipologia', 'vendor', 'obbligatorio')
     search_fields = ('titolo', 'descrizione', 'vendor__nome')
 
 
@@ -25,7 +25,8 @@ class DipendenteAdmin(admin.ModelAdmin):
 
 @admin.register(AssegnazioneCorso)
 class AssegnazioneCorsoAdmin(admin.ModelAdmin):
-    list_display = ('dipendente', 'corso', 'stato', 'data_assegnazione', 'data_scadenza')
-    list_filter = ('stato', 'corso__vendor')
+    list_display = ('dipendente', 'corso', 'stato', 'data_assegnazione', 'data_completamento', 'data_scadenza')
+    list_filter = ('stato', 'corso__tipologia', 'corso__vendor')
     search_fields = ('dipendente__nome', 'dipendente__cognome', 'dipendente__email', 'corso__titolo')
     autocomplete_fields = ('dipendente', 'corso')
+    date_hierarchy = 'data_scadenza'

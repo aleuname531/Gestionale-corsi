@@ -1,0 +1,62 @@
+{% extends "gestionale/base.html" %}
+
+{% block title %}Dipendenti — Gestione Formazione{% endblock %}
+{% block page_title %}Dipendenti{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'gestionale:dipendente_create' %}" class="btn btn-primary btn-sm">+ Nuovo dipendente</a>
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="get" style="display:flex;gap:10px;flex:1;flex-wrap:wrap;align-items:center;">
+    <div class="search-wrap">
+      <input type="text" name="q" class="search-input" placeholder="Cerca per nome, cognome o email…" value="{{ filtri.q }}">
+    </div>
+    <select name="reparto" class="filter-select">
+      <option value="">Tutti i reparti</option>
+      {% for val, label in reparti %}
+      <option value="{{ val }}" {% if filtri.reparto == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">Filtra</button>
+    {% if filtri.q or filtri.reparto %}
+    <a href="{% url 'gestionale:dipendente_list' %}" class="btn btn-outline btn-sm">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding:0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Cognome e Nome</th>
+          <th>Email</th>
+          <th>Reparto</th>
+          <th>Stato</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in dipendenti %}
+        <tr>
+          <td><strong>{{ d.cognome }} {{ d.nome }}</strong></td>
+          <td>{{ d.email }}</td>
+          <td><span class="badge badge-secondary">{{ d.reparto }}</span></td>
+          <td>{% if d.attivo %}<span class="badge badge-success">Attivo</span>{% else %}<span class="badge badge-danger">Inattivo</span>{% endif %}</td>
+          <td class="td-actions">
+            <a href="{% url 'gestionale:dipendente_detail' d.pk %}" class="btn btn-outline btn-sm">Dettaglio</a>
+            <a href="{% url 'gestionale:dipendente_update' d.pk %}" class="btn btn-sm" style="background:#f1f5f9;color:#1e293b;">Modifica</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="padding:24px;text-align:center;color:#64748b;">Nessun dipendente trovato.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

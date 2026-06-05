@@ -1,0 +1,39 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accedi — Gestione Formazione</title>
+  <link rel="stylesheet" href="{% static 'gestionale/css/dashboard.css' %}">
+</head>
+<body>
+<div id="login-page">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">Gestione <span>Formazione</span></div>
+      <p>Portale formazione aziendale</p>
+    </div>
+    <h2>Accedi</h2>
+    {% if form.errors %}
+    <div class="login-error" style="display:block;">
+      {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+      {% if not form.non_field_errors %}Credenziali non valide. Riprova.{% endif %}
+    </div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="id_username">Username</label>
+        <input type="text" name="username" id="id_username" class="form-control" autofocus required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="id_password">Password</label>
+        <input type="password" name="password" id="id_password" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" style="margin-top:8px;width:100%;justify-content:center;">Accedi</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
