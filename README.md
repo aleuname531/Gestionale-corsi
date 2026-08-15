@@ -1,12 +1,12 @@
 # 📚 Courses — Portale Gestione Formazione Aziendale
 
-> **Beta80 Group** · Gestione corsi e certificazioni del personale
+> · Gestione corsi e certificazioni del personale
 
 ---
 
 ## Panoramica del Progetto
 
-**Courses** è un portale web interno per la gestione della formazione aziendale di Beta80 Group.  
+**Courses** è un portale web interno per la gestione della formazione aziendale.  
 Permette all'azienda di monitorare le certificazioni, i corsi assegnati e i progressi formativi di ogni dipendente, con un'interfaccia dedicata sia per gli amministratori che per i singoli dipendenti.
 
 ---
@@ -130,8 +130,8 @@ Da iniziare  →  In corso  →  Completato
 
 ## Contatti
 
-**Beta80 Group** — Team IT / HR  
-📧 Emanuela.Gjinaj@beta80group.it
+
+📧gjinajemanuela@gmail.com
 
 ---
 
