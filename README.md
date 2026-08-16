@@ -52,7 +52,7 @@ Il progetto è pensato come portfolio/demo personale e non contiene dati reali d
 ## Struttura del progetto
 
 ```text
-gestionalevero/
+Gestionale-corsi/
 ├── README.md
 ├── requirements.txt
 ├── manage.py
