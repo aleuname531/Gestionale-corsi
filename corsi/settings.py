@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
-    'django-insecure-dev-only-do-not-use-in-production'
+    'change-me-in-production'
 )
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'

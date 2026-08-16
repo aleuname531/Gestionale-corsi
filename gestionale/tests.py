@@ -13,8 +13,8 @@ class ApiSecurityValidationTests(TestCase):
         self.client.get('/login/')  # renderizza {% csrf_token %}, imposta il cookie
         self.csrf = self.client.cookies['csrftoken'].value
         self.admin = User.objects.create_user(
-            username='admin@beta80group.it',
-            email='admin@beta80group.it',
+            username='admin@demo.local',
+            email='admin@demo.local',
             password='secret',
             is_staff=True,
         )
@@ -113,7 +113,7 @@ class ApiSecurityValidationTests(TestCase):
         self.csrf = self.client.cookies['csrftoken'].value
         self.csrf_headers = {'X-CSRFToken': self.csrf}
         response = self.post_json('/api/auth/login/', {
-            'email': 'admin@beta80group.it',
+            'email': 'admin@demo.local',
             'password': 'secret',
         })
 

@@ -14,12 +14,12 @@ from gestionale.models import AssegnazioneCorso, Corso, Dipendente, Vendor
 
 
 DEMO_USERS = [
-    {'username': 'admin',                    'email': 'admin@beta80group.it',               'password': 'admin123',  'first_name': 'Admin',      'last_name': 'Beta80',   'is_staff': True,  'is_superuser': True},
-    {'username': 'rossi.mario',              'email': 'rossi.mario@beta80group.it',          'first_name': 'Mario',      'last_name': 'Rossi',    'area': 'RPA'},
-    {'username': 'cangini.elisabetta',       'email': 'cangini.elisabetta@beta80group.it',   'first_name': 'Elisabetta', 'last_name': 'Cangini',  'area': 'RPA'},
-    {'username': 'ferrari.giulia',           'email': 'ferrari.giulia@beta80group.it',       'first_name': 'Giulia',     'last_name': 'Ferrari',  'area': 'RPA'},
-    {'username': 'bianchi.luca',             'email': 'bianchi.luca@beta80group.it',         'first_name': 'Luca',       'last_name': 'Bianchi',  'area': 'PM'},
-    {'username': 'moretti.sara',             'email': 'moretti.sara@beta80group.it',         'first_name': 'Sara',       'last_name': 'Moretti',  'area': 'RPA'},
+    {'username': 'admin',                    'email': 'admin@demo.local',               'password': 'admin123',  'first_name': 'Admin',      'last_name': 'Demo',   'is_staff': True,  'is_superuser': True},
+    {'username': 'rossi.mario',              'email': 'rossi.mario@demo.local',          'first_name': 'Mario',      'last_name': 'Rossi',    'area': 'RPA'},
+    {'username': 'cangini.elisabetta',       'email': 'cangini.elisabetta@demo.local',   'first_name': 'Elisabetta', 'last_name': 'Cangini',  'area': 'RPA'},
+    {'username': 'ferrari.giulia',           'email': 'ferrari.giulia@demo.local',       'first_name': 'Giulia',     'last_name': 'Ferrari',  'area': 'RPA'},
+    {'username': 'bianchi.luca',             'email': 'bianchi.luca@demo.local',         'first_name': 'Luca',       'last_name': 'Bianchi',  'area': 'PM'},
+    {'username': 'moretti.sara',             'email': 'moretti.sara@demo.local',         'first_name': 'Sara',       'last_name': 'Moretti',  'area': 'RPA'},
 ]
 
 DEMO_CORSI = [
@@ -33,17 +33,17 @@ DEMO_CORSI = [
 
 # (email_dipendente, titolo_corso, stato, data_inizio, data_fine)
 DEMO_ASSEGNAZIONI = [
-    ('cangini.elisabetta@beta80group.it', 'RPA Developer Foundation (v2021.10)',  'completato',  '2023-01-10', '2023-03-15'),
-    ('cangini.elisabetta@beta80group.it', 'Advanced RPA Developer Certification', 'completato',  '2024-02-01', '2024-05-30'),
-    ('rossi.mario@beta80group.it',        'RPA Developer Foundation (v2021.10)',  'completato',  '2023-03-01', '2023-06-01'),
-    ('rossi.mario@beta80group.it',        'Microsoft Azure Fundamentals (AZ-900)','in_corso',    '2025-01-15', '2025-06-30'),
-    ('ferrari.giulia@beta80group.it',     'RPA Developer Foundation (v2021.10)',  'completato',  '2024-01-10', '2024-04-20'),
-    ('ferrari.giulia@beta80group.it',     'Sicurezza Informatica — Base',         'da_iniziare',  '2025-07-01', '2025-08-01'),
-    ('bianchi.luca@beta80group.it',       'Project Management Professional (PMP)','in_corso',    '2025-03-01', '2025-09-01'),
-    ('bianchi.luca@beta80group.it',       'Power BI Desktop Fundamentals',        'da_iniziare',  '2025-10-01', '2025-12-31'),
-    ('moretti.sara@beta80group.it',       'RPA Developer Foundation (v2021.10)',  'completato',  '2023-01-01', '2023-04-01'),
-    ('moretti.sara@beta80group.it',       'Sicurezza Informatica — Base',         'completato',  '2024-05-01', '2024-06-01'),
-    ('rossi.mario@beta80group.it',        'Sicurezza Informatica — Base',         'completato',  '2024-04-15', '2024-06-01'),
+    ('cangini.elisabetta@demo.local', 'RPA Developer Foundation (v2021.10)',  'completato',  '2023-01-10', '2023-03-15'),
+    ('cangini.elisabetta@demo.local', 'Advanced RPA Developer Certification', 'completato',  '2024-02-01', '2024-05-30'),
+    ('rossi.mario@demo.local',        'RPA Developer Foundation (v2021.10)',  'completato',  '2023-03-01', '2023-06-01'),
+    ('rossi.mario@demo.local',        'Microsoft Azure Fundamentals (AZ-900)','in_corso',    '2025-01-15', '2025-06-30'),
+    ('ferrari.giulia@demo.local',     'RPA Developer Foundation (v2021.10)',  'completato',  '2024-01-10', '2024-04-20'),
+    ('ferrari.giulia@demo.local',     'Sicurezza Informatica — Base',         'da_iniziare',  '2025-07-01', '2025-08-01'),
+    ('bianchi.luca@demo.local',       'Project Management Professional (PMP)','in_corso',    '2025-03-01', '2025-09-01'),
+    ('bianchi.luca@demo.local',       'Power BI Desktop Fundamentals',        'da_iniziare',  '2025-10-01', '2025-12-31'),
+    ('moretti.sara@demo.local',       'RPA Developer Foundation (v2021.10)',  'completato',  '2023-01-01', '2023-04-01'),
+    ('moretti.sara@demo.local',       'Sicurezza Informatica — Base',         'completato',  '2024-05-01', '2024-06-01'),
+    ('rossi.mario@demo.local',        'Sicurezza Informatica — Base',         'completato',  '2024-04-15', '2024-06-01'),
 ]
 
 
@@ -70,7 +70,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('\n✅ Seed completato con successo!\n'))
         self.stdout.write('Credenziali di accesso:')
-        self.stdout.write('  👑 Admin:      admin@beta80group.it  /  admin123')
+        self.stdout.write('  👑 Admin:      admin@demo.local  /  admin123')
         self.stdout.write('  👤 Dipendente: le password generate sono stampate sopra per ogni utente')
 
     def _seed_users(self):

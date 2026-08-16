@@ -1,138 +1,231 @@
-# 📚 Courses — Portale Gestione Formazione Aziendale
+# Gestione Formazione Django
 
-> · Gestione corsi e certificazioni del personale
+Applicazione web sviluppata con Django per la gestione di corsi aziendali, dipendenti, assegnazioni e scadenze formative.
 
----
+## Descrizione del progetto
 
-## Panoramica del Progetto
+Questo progetto è un esempio personale di sistema di gestione della formazione interna. L'applicazione permette di:
 
-**Courses** è un portale web interno per la gestione della formazione aziendale.  
-Permette all'azienda di monitorare le certificazioni, i corsi assegnati e i progressi formativi di ogni dipendente, con un'interfaccia dedicata sia per gli amministratori che per i singoli dipendenti.
+- gestire corsi e vendor/fornitori
+- registrare dipendenti e reparti aziendali
+- assegnare corsi a persone specifiche
+- monitorare lo stato dei corsi (`da_iniziare`, `in_corso`, `completato`, `scaduto`)
+- caricare certificati e materiali didattici
+- esportare dati in Excel
+- gestire accessi distinti tra admin e dipendenti
 
----
+Il progetto è pensato come portfolio/demo personale e non contiene dati reali di persone o aziende.
 
-## Struttura del Repository
+## Funzionalità
 
-```
-Courses/
-├── README.md                  ← Questo file
-├── manage.py                  ← Comandi Django
-├── corsi/                     ← Configurazione progetto Django
-├── gestionale/                ← App principale: models, views, urls, admin, static, templates
-├── db.sqlite3                 ← Database locale SQLite
-└── requirements.txt           ← Dipendenze Python
-```
+### Admin / staff
 
----
+- dashboard con riepilogo generale
+- creazione, modifica ed eliminazione di corsi
+- gestione vendor e catalogo corsi
+- gestione dipendenti
+- assegnazione corsi ai dipendenti
+- controllo di date di inizio, scadenza e completamento
+- upload di certificati e materiali
+- filtraggio e consultazione delle liste principali
+- export in Excel
 
-## Funzionalità Principali
+### Dipendenti
 
-### Ruolo Admin
-- Visualizza tutti i dipendenti e i loro corsi assegnati
-- Crea, modifica ed elimina corsi
-- Assegna corsi ai dipendenti
-- Monitora lo stato di ogni corso (Da iniziare / In corso / Completato)
-- Vede i corsi in scadenza e quelli con validità scaduta
-- Gestisce i materiali PDF allegati a ogni corso
-- Esporta reportistica
+- accesso al proprio profilo
+- visualizzazione dei corsi assegnati
+- controllo dello stato del corso
+- verifica delle scadenze
+- caricamento del certificato richiesto
+- accesso solo ai propri dati
 
-### Ruolo Dipendente
-- Accede alla propria area personale
-- Visualizza i corsi assegnati, in corso e completati
-- Scarica i materiali didattici (PDF, link)
-- Vede le scadenze dei propri corsi
-- Riceve suggerimenti sui corsi consigliati
+## Tecnologie utilizzate
 
----
+- Python 3
+- Django 6
+- SQLite per sviluppo locale
+- Django templates
+- openpyxl per export Excel
+- django-ratelimit per protezione del login
+- python-dateutil per gestione date e scadenze
 
-## Accesso al Sistema
+## Struttura del progetto
 
-| Ruolo      | Credenziali di default                         |
-|------------|------------------------------------------------|
-| Admin      | Utente Django con `is_staff=True`              |
-| Dipendente | Utente Django attivo con email aziendale       |
-
-> ⚠️ Creare gli utenti da Django Admin o da shell prima dell'accesso. Il backend Django è la fonte principale dei dati; `localStorage` viene usato solo come cache del browser.
-
----
-
-## Struttura Dati — Colonne Registro Corsi (Excel)
-
-Il file Excel di riferimento segue questo schema colonnare:
-
-| Colonna              | Tipo      | Descrizione                                                  |
-|----------------------|-----------|--------------------------------------------------------------|
-| **Cognome**          | Testo     | Cognome del dipendente                                       |
-| **Nome**             | Testo     | Nome del dipendente                                          |
-| **Area RPA**         | Numero    | Numero identificativo area / team RPA                        |
-| **Vendor**           | Testo     | Fornitore del corso (es. UiPath, Microsoft, Coursera…)       |
-| **Corso**            | Testo     | Nome completo del corso o certificazione                     |
-| **Tipologia corso**  | Testo     | Categoria (es. Tecnico, Soft Skills, Compliance, Sicurezza…) |
-| **STATO**            | Enum      | `completato` · `in corso` · `da iniziare`                    |
-| **Validità**         | Testo     | Stato di validità del certificato (es. `valido`, `scaduto`)  |
-| **Anno conseguimento** | Anno    | Anno in cui il corso è stato completato/certificato          |
-| **ck**               | Flag/Note | Colonna di check o annotazioni manuali                       |
-
----
-
-## Tecnologie Utilizzate
-
-| Layer     | Tecnologia              |
-|-----------|-------------------------|
-| Frontend  | HTML5, CSS3, JavaScript (ES6+) |
-| Backend   | Django + SQLite |
-| Cache     | `localStorage` (browser) |
-| UI Design | CSS Variables, Flexbox, Grid |
-| File      | Upload certificati PDF/DOCX tramite Django `request.FILES` |
-
----
-
-## Come Avviare il Portale
-
-1. Creare/attivare un virtualenv e installare le dipendenze: `pip install -r requirements.txt`
-2. Applicare le migrazioni: `python manage.py migrate`
-3. Creare dati demo: `python manage.py seed_demo`
-4. Avviare il server: `python manage.py runserver`
-5. Aprire `http://127.0.0.1:8000/` e fare login con un utente Django
-
-I dati vengono salvati tramite API Django; il browser mantiene solo una cache temporanea in `localStorage`.
-
-> 💡 Per un ambiente multi-utente reale si consiglia di completare l'autenticazione server-side e migrare il database su PostgreSQL.
-
----
-
-## Gestione degli Stati Corso
-
-```
-Da iniziare  →  In corso  →  Completato
-     │               │             │
-  Assegnato      Frequenza      Certificato
-  non avviato    attiva         ottenuto
+```text
+gestionalevero/
+├── README.md
+├── requirements.txt
+├── manage.py
+├── db.sqlite3
+├── .gitignore
+├── .env.example
+├── corsi/
+│   ├── settings.py
+│   ├── urls.py
+│   └── ...
+├── gestionale/
+│   ├── models.py
+│   ├── views.py
+│   ├── forms.py
+│   ├── urls.py
+│   ├── management/
+│   ├── templates/
+│   └── static/
+└── media/
 ```
 
-- **Da iniziare**: corso assegnato ma non ancora avviato
-- **In corso**: frequenza attiva, materiali in uso
-- **Completato**: esame/certificato ottenuto, anno registrato
+## Requisiti
 
----
+- Python 3.12+
+- pip
+- virtual environment (consigliato)
 
-## Roadmap Futura
+## Installazione
 
-- [x] Integrazione backend (API REST)
-- [ ] Database persistente (PostgreSQL / SQLite)
-- [ ] Notifiche email automatiche per scadenze
-- [ ] Dashboard analytics con grafici
-- [ ] Import/export da/verso Excel
-- [ ] Autenticazione SSO aziendale (Azure AD)
-- [ ] App mobile (Progressive Web App)
+1. Clona il repository.
+2. Crea un ambiente virtuale:
 
----
+```bash
+python -m venv .venv
+```
 
-## Contatti
+3. Attiva l'ambiente virtuale:
 
+- Windows:
 
-📧gjinajemanuela@gmail.com
+```powershell
+.venv\Scripts\Activate.ps1
+```
 
----
+- Linux/macOS:
 
-*Ultimo aggiornamento: Maggio 2026*
+```bash
+source .venv/bin/activate
+```
+
+4. Installa le dipendenze:
+
+```bash
+pip install -r requirements.txt
+```
+
+5. Crea un file `.env` partendo da `.env.example`:
+
+```bash
+copy .env.example .env
+```
+
+oppure su Linux/macOS:
+
+```bash
+cp .env.example .env
+```
+
+6. Esegui le migrazioni:
+
+```bash
+python manage.py migrate
+```
+
+7. Popola il database con dati demo:
+
+```bash
+python manage.py seed_demo
+```
+
+8. Avvia il server:
+
+```bash
+python manage.py runserver
+```
+
+9. Apri il progetto nel browser:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## Credenziali demo
+
+Il comando `seed_demo` crea utenti di esempio.
+
+### Admin
+
+- email: `admin@demo.local`
+- password: `admin123`
+
+### Dipendenti
+
+Sono presenti utenti demo con email fittizie e password generate automaticamente durante il seed. Le credenziali vengono mostrate nella console del terminale.
+
+## Screenshot dell'app
+
+Di seguito sono previsti screenshot della dashboard, della lista corsi e della pagina di login. Aggiungerli in questa sezione prima del publish finale del repository.
+
+- Login page: da aggiungere
+- Dashboard: da aggiungere
+- Gestione corsi: da aggiungere
+- Dettaglio dipendente: da aggiungere
+
+## Modelli principali
+
+### Corso
+
+- titolo
+- descrizione
+- vendor
+- tipologia
+- durata in ore
+- validità in mesi
+- obbligatorietà
+- link esterno
+
+### Dipendente
+
+- nome e cognome
+- email
+- reparto
+- stato attivo
+- stipendio (se presente)
+
+### AssegnazioneCorso
+
+- data assegnazione
+- data inizio pianificata
+- data fine pianificata
+- data completamento
+- data scadenza
+- stato
+- eventuale certificato allegato
+
+## Export e API
+
+Il progetto include:
+
+- export Excel dei dati
+- endpoint API per la creazione di corsi e assegnazioni
+- upload certificato tramite API
+- login API
+
+## Note importanti
+
+- Il database di default è SQLite (`db.sqlite3`), adatto allo sviluppo locale.
+- Prima del publish su GitHub, non includere file `.env` né dati reali.
+- Le immagini e i file caricati vengono salvati sotto `media/`.
+- Il progetto è da intendersi come demo/progetto personale e non come applicazione ufficiale di un'azienda o di un cliente.
+
+## Avviso su proprietà e pubblicazione
+
+Prima di rendere pubblico il repository, verificare che il codice non sia stato sviluppato per un cliente, una azienda o un corso con restrizioni di proprietà/intellectual property. Se il progetto è stato creato in autonomia, può essere pubblicato come portfolio personale.
+
+## Possibili sviluppi futuri
+
+- notifica email per scadenze corsi
+- dashboard analytics avanzata
+- integrazione con sistemi HR/SSO
+- miglioramento della reportistica
+- migrazione su database PostgreSQL in produzione
+
+## Contesto
+
+Questo progetto è una demo personale dedicata alla gestione della formazione interna, con focus su corsi, certificazioni e monitoraggio delle scadenze formative.

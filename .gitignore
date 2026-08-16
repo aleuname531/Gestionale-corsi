@@ -6,12 +6,18 @@ __pycache__/
 .Python
 
 # Virtual environment
+.venv/
 venv/
 env/
+
+# Environment variables
 .env
+.env.*
+!.env.example
 
 # Django
 *.sqlite3
+db.sqlite3
 media/
 staticfiles/
 *.log
